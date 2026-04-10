@@ -1,0 +1,20 @@
+# configs/full_system.yaml — M8 FullSystem configuration.
+# YOLOv8s + FEM + POPAM + CrossAttentionFusion (P4) + VisibilityMapHead.
+# aug_probability set to best p from augmentation strength sweep.
+# Update aug_probability after completing Step 8.
+
+_base_: base.yaml
+
+model_id: M8
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+
+# Architecture flags
+use_fem: true
+use_popam: true
+fusion_type: cross_attention   # early | late | cross_attention
+fusion_scale: P4               # cross-attention applied at P4 only (P3 → OOM, documented)
+use_visibility_head: true
+
+# Loss schedule (overrides base.yaml)
+lambda_vis: 0.5                # ramps to 1.0; see VisibilityMapHead
+lambda_occ_consistency: 0.1

@@ -1,0 +1,8 @@
+# configs/aug_p06.yaml — Augmentation strength sweep: p=0.6
+# All other hyperparameters identical to base.yaml.
+# Used in Step 8 (notebooks/02_aug_sweep.ipynb).
+
+_base_: base.yaml
+
+aug_probability: 0.6
+model_id: M2_p06

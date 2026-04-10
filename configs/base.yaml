@@ -1,0 +1,33 @@
+# configs/base.yaml — Base hyperparameters shared across all experiment variants.
+# Override individual keys in variant configs (aug_p02.yaml etc.).
+# run_mode controls batch size, epoch count, and data paths automatically.
+# NEVER set checkpoint_metric to mAP@0.5 — always AP_hard.
+
+model: yolov8s
+imgsz: 640
+epochs: 100
+batch:
+  local: 4
+  kaggle: 32
+  colab: 32
+  a100: 64
+
+optimizer: AdamW
+lr0: 0.001
+lrf: 0.01          # final lr = lr0 * lrf
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3
+
+seed: 42
+amp: true
+checkpoint_metric: AP_hard   # ALWAYS AP_hard, not mAP@0.5
+
+run_mode: local    # local | kaggle | colab | eval | resume
+
+# Loss weights
+lambda_vis: 0.5            # ramps to 1.0 at epoch 60 (see VisibilityMapHead)
+lambda_occ_consistency: 0.1  # constant; λ_occ=0 is a documented negative result
+
+# Augmentation (overridden in aug_p*.yaml)
+aug_probability: 0.0
