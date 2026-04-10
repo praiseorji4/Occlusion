@@ -1,0 +1,16 @@
+# configs/m3_fem_popam.yaml — M3 +FEM+POPAM (no depth).
+# YOLOv8s with FEM (after C2f blocks 3 and 5) and POPAM (top of FPN neck).
+# Label-aware augmentation. No depth fusion.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M3
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true
+
+# Architecture flags
+use_fem: true          # insert FEM after C2f blocks at backbone positions 3 and 5
+use_popam: true        # insert POPAM at top of FPN neck
+fusion_type: none
+use_visibility_head: false

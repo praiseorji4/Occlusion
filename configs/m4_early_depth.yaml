@@ -1,0 +1,17 @@
+# configs/m4_early_depth.yaml — M4 +EarlyDepth.
+# YOLOv8s + FEM + POPAM + early fusion (depth concatenated as 4th input channel).
+# First backbone conv adapted via weight surgery (RGB channels copied, depth init=0).
+# Label-aware augmentation.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M4
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true
+
+# Architecture flags
+use_fem: true
+use_popam: true
+fusion_type: early     # depth as 4th input channel; weight surgery on first Conv2d
+use_visibility_head: false

@@ -1,0 +1,17 @@
+# configs/m5_late_depth.yaml — M5 +LateDepth.
+# YOLOv8s + FEM + POPAM + late fusion via Weighted Box Fusion (WBF).
+# Parallel RGB and depth branches; predictions merged post-backbone (RGB=0.7, depth=0.3).
+# Label-aware augmentation.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M5
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true
+
+# Architecture flags
+use_fem: true
+use_popam: true
+fusion_type: late      # WBF post-processing; rgb_weight=0.7, depth_weight=0.3
+use_visibility_head: false

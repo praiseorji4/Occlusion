@@ -1,0 +1,19 @@
+# configs/m6_xattn_depth.yaml — M6 +CrossAttnDepth.
+# YOLOv8s + FEM + POPAM + cross-attention fusion at FPN neck.
+# Cross-attention applied at P4 ONLY (40x40 = 1600 tokens).
+# P3 (80x80 = 6400 tokens) causes OOM at batch=16 — documented negative result.
+# Label-aware augmentation.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M6
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true
+
+# Architecture flags
+use_fem: true
+use_popam: true
+fusion_type: cross_attention
+fusion_scale: P4       # P4 only; see results/narratives/M6.md for P3 OOM documentation
+use_visibility_head: false

@@ -1,0 +1,23 @@
+# configs/m7_vis_head.yaml — M7 +VisibilityHead.
+# YOLOv8s + FEM + POPAM + CrossAttentionFusion (P4) + VisibilityMapHead.
+# lambda_vis schedule: 0.5 (epochs 1-30) -> ramp to 1.0 (epochs 31-60) -> 1.0 constant.
+# lambda_occ_consistency = 0.1 (must NOT be 0; lambda_occ=0 is a documented negative result).
+# Label-aware augmentation.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M7
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true
+
+# Architecture flags
+use_fem: true
+use_popam: true
+fusion_type: cross_attention
+fusion_scale: P4
+use_visibility_head: true
+
+# Loss weights
+lambda_vis: 0.5                # scheduled; see VisibilityMapHead.get_lambda_vis()
+lambda_occ_consistency: 0.1   # constant; lambda_occ=0 collapse is a documented negative result

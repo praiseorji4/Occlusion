@@ -1,0 +1,15 @@
+# configs/m0_baseline.yaml — M0 RGB Baseline.
+# Stock YOLOv8s, no augmentation, no FEM/POPAM, no depth fusion, no visibility head.
+# This is the baseline against which all subsequent variants are measured.
+
+_base_: base.yaml
+
+model_id: M0
+aug_probability: 0.0
+label_aware: false
+
+# Architecture flags — all off
+use_fem: false
+use_popam: false
+fusion_type: none
+use_visibility_head: false

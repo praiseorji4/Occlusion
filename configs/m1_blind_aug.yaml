@@ -1,0 +1,16 @@
+# configs/m1_blind_aug.yaml — M1 Blind Augmentation.
+# YOLOv8s with augmentation applied WITHOUT label conditioning.
+# Used as the control to isolate the effect of label-aware vs. blind aug (Step 9 gate).
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M1
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: false     # blind aug: strategies applied without respecting occlusion_lvl
+
+# Architecture flags — same as M0
+use_fem: false
+use_popam: false
+fusion_type: none
+use_visibility_head: false

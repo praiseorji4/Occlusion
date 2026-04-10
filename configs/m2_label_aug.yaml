@@ -1,0 +1,16 @@
+# configs/m2_label_aug.yaml — M2 Label-Aware Augmentation.
+# YOLOv8s with label-conditioned augmentation (strategies respect occlusion_lvl).
+# Gate: M2_AP_hard - M1_AP_hard >= 1.0 before proceeding to M3+.
+# aug_probability: PLACEHOLDER — update with best p from aug sweep (Step 8).
+
+_base_: base.yaml
+
+model_id: M2
+aug_probability: 0.4   # PLACEHOLDER — update with best p from sweep
+label_aware: true      # label-aware: budget table controls strategy per occlusion_lvl
+
+# Architecture flags — same as M0
+use_fem: false
+use_popam: false
+fusion_type: none
+use_visibility_head: false
