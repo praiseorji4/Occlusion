@@ -1,0 +1,14 @@
+# Novel full system — FEM + POPAM + cross-attention RGB-D fusion + visibility head.
+# This is the novel-contribution configuration; first execution happens in Phase 4.
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: full_system
+fusion_type: cross_attention
+fusion_scale: P4
+use_fem: true
+use_popam: true
+use_visibility_head: true
+lambda_vis: 0.5
+lambda_occ_consistency: 0.1
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

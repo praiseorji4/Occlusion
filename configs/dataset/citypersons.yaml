@@ -1,0 +1,16 @@
+# CityPersons: 1 class. Hyperparameters from the W&B sweep for YOLOv8x.
+# scale / hsv_s / hsv_v / cls / box use ultralytics defaults for this dataset.
+_base_: base.yaml
+
+dataset: citypersons
+nc: 1
+names: {0: pedestrian}
+
+epochs: 150
+batch: 4
+lr0: 0.000842484306662393
+lrf: 0.017540070191124905
+weight_decay: 0.0006096314956015754
+warmup_epochs: 5
+dropout: 0.2650280626796416
+mosaic: 0.90226734204067

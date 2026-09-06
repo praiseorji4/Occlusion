@@ -1,0 +1,4 @@
+# YOLOv8n — nano detector for on-device deployment, KITTI only.
+# Reuses the YOLOv8x/KITTI hyperparameters (see dataset/kitti.yaml).
+_base_: base.yaml
+model: yolov8n

@@ -1,0 +1,6 @@
+# YOLOv8n deployment occlusion ablation (KITTI only).
+_base_: [dataset/kitti.yaml, model/yolov8n.yaml]
+experiment: aug_ablation
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

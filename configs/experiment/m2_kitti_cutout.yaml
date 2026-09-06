@@ -1,0 +1,6 @@
+# M2 — label-aware occlusion augmentation (cutout, respects occlusion level).
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: m2_label_cutout
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

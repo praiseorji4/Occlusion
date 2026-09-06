@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# Virtual envs
+.venv/
+venv/
+env/
+kitti-env/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Data & outputs (never commit datasets, checkpoints, or run artifacts)
+data/raw/
+data/kitti/
+data/citypersons/
+data/*_yolo/
+data/*_depth/
+data/*_depth_conf/
+data/*_yolo.yaml
+data/*.cache
+results/*
+!results/expected/
+/runs/
+wandb/
+outputs/
+*.pt
+*.npy
+
+# Large source archive (kept locally, not version-controlled)
+*.zip
+.archive_extracted/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

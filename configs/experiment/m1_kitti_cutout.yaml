@@ -1,0 +1,6 @@
+# M1 — blind occlusion augmentation (cutout only, no label conditioning).
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: m1_blind_cutout
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: false
