@@ -1,0 +1,6 @@
+# M-latefusion — feature-level RGB-D late fusion (archive LateFusionModel).
+# Parallel RGB + 1-channel depth backbones, 1x1 conv fuse at P3/P4/P5.
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: latefusion
+fusion_type: late_feature
+aug_strategy: none

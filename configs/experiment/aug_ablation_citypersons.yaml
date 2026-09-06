@@ -1,0 +1,6 @@
+# CityPersons occlusion ablation. Set aug_strategy per technique.
+_base_: [dataset/citypersons.yaml, model/yolov8x.yaml]
+experiment: aug_ablation
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

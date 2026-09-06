@@ -1,0 +1,7 @@
+# M-aug-sweep — per-technique occlusion ablation on KITTI/8x.
+# Set aug_strategy: cutout|random_erasing|hide_and_seek|gridcut|body_part|combined_all|combined_best_two
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: aug_ablation
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

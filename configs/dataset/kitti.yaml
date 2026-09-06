@@ -1,0 +1,21 @@
+# KITTI: 3 classes. Hyperparameters from the W&B sweep (used by both YOLOv8x and
+# YOLOv8n on KITTI; 8n reuses the 8x/KITTI values).
+_base_: base.yaml
+
+dataset: kitti
+nc: 3
+names: {0: Car, 1: Pedestrian, 2: Cyclist}
+
+epochs: 150
+batch: 32
+lr0: 0.0013018964408270848
+lrf: 0.12280521855806883
+weight_decay: 0.005443539131303524
+warmup_epochs: 1
+dropout: 0.29967521962685517
+mosaic: 0.1227161316543317
+scale: 0.4365270356130611
+hsv_s: 0.3000787567297607
+hsv_v: 0.2879996674307096
+cls_weight: 1.8804048309673245
+box_weight: 6.4121800080513855

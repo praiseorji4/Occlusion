@@ -1,0 +1,7 @@
+# RGB-D late fusion + best occlusion augmentation (combined archive + novel path).
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: latefusion_aug
+fusion_type: late_feature
+aug_strategy: cutout
+aug_p: 0.5
+label_aware: true

@@ -1,0 +1,8 @@
+# M0 — RGB baseline, no augmentation, no depth, no novel modules.
+_base_: [dataset/kitti.yaml, model/yolov8x.yaml]
+experiment: m0_baseline
+aug_strategy: none
+fusion_type: none
+use_fem: false
+use_popam: false
+use_visibility_head: false
