@@ -1,0 +1,4 @@
+# YOLOv8n deployment baseline (KITTI only).
+_base_: [dataset/kitti.yaml, model/yolov8n.yaml]
+experiment: m0_baseline
+aug_strategy: none

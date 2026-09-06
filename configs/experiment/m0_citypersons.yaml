@@ -1,0 +1,4 @@
+# M0 — CityPersons baseline (1 class), YOLOv8x.
+_base_: [dataset/citypersons.yaml, model/yolov8x.yaml]
+experiment: m0_baseline
+aug_strategy: none

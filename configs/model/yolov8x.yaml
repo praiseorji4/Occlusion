@@ -1,0 +1,3 @@
+# YOLOv8x — full-size detector, KITTI + CityPersons.
+_base_: base.yaml
+model: yolov8x
