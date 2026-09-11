@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="ultrasonic_mass" value="0.008" />  <!-- HC-SR04 module ~8 g -->
+  <xacro:property name="ultrasonic_length" value="0.05" />
+  <xacro:property name="ultrasonic_width" value="0.014" />
+  <xacro:property name="ultrasonic_height" value="0.02" />
+  <xacro:property name="com_x" value="-0.000082" />     <!--Center of Mass-->
+  <xacro:property name="com_y" value="-0.000041" /> 
+  <xacro:property name="com_z" value="0.010541" /> 
+  <xacro:property name="stand_height" value="${ultrasonic_height}" /> 
+
+  <xacro:property name="ultrasonic_x" value="-0.047612" /> 
+  <xacro:property name="ultrasonic_y" value="0.09170" /> 
+  <xacro:property name="ultrasonic_z" value="0.037042" /> 
+
+
+
+
+
+  <xacro:macro name="ubot_ultrasonic" params="prefix">
+
+    <link name="left_ultrasonic_link">
+      <visual>
+        <origin xyz="-0.040 -0.057 0.019" rpy="0 0 ${pi}"/>
+        <geometry>
+            <mesh filename="file://$(find ubot_description)/meshes/ultrasonic.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+
+
+        <material name="white">
+          <color rgba="1 1 1 1"/>
+        </material>
+      </visual>
+
+      <inertial>
+          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+          <mass value="${ultrasonic_mass}"/>
+          <inertia ixx="${(1/12) * ultrasonic_mass * ((ultrasonic_width * ultrasonic_width) + (ultrasonic_height * ultrasonic_height))}"  ixy="0.0"  ixz="0.0"  
+                    iyy="${(1/12) * ultrasonic_mass * ((ultrasonic_length * ultrasonic_length) + (ultrasonic_height * ultrasonic_height))}"  iyz="0.0" 
+                    izz="${(1/12) * ultrasonic_mass * ((ultrasonic_length * ultrasonic_length) + (ultrasonic_width * ultrasonic_width))}"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}left_ultrasonic_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="left_ultrasonic_link"/>
+      <origin xyz="${ultrasonic_x} ${ultrasonic_y} ${ultrasonic_z}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="right_ultrasonic_link">
+      <visual>
+        <origin xyz="0.040 0.057 0.019" rpy="0 0 0"/>
+        <geometry>
+            <mesh filename="file://$(find ubot_description)/meshes/ultrasonic.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <!-- <geometry>
+          <cylinder radius="${ultrasonic_width/2}" length="${ultrasonic_height/2}"/>
+        </geometry> -->
+        <material name="white">
+          <color rgba="1 1 1 0.5"/>
+        </material>
+      </visual>
+
+      <!-- <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${ultrasonic_width/2}" length="${ultrasonic_height}"/>
+        </geometry>
+      </collision> -->
+
+      <inertial>
+          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+          <mass value="${ultrasonic_mass}"/>
+          <inertia ixx="${(1/12) * ultrasonic_mass * ((ultrasonic_width * ultrasonic_width) + (ultrasonic_height * ultrasonic_height))}"  ixy="0.0"  ixz="0.0"  
+                    iyy="${(1/12) * ultrasonic_mass * ((ultrasonic_length * ultrasonic_length) + (ultrasonic_height * ultrasonic_height))}"  iyz="0.0" 
+                    izz="${(1/12) * ultrasonic_mass * ((ultrasonic_length * ultrasonic_length) + (ultrasonic_width * ultrasonic_width))}"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}right_ultrasonic_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="right_ultrasonic_link"/>
+      <origin xyz="${ultrasonic_x} ${-ultrasonic_y} ${ultrasonic_z}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

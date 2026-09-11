@@ -1,0 +1,116 @@
+site_name: ubot Workspace Documentation
+site_description: Documentation for the ubot ROS2 differential-drive robot workspace
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - mermaid2
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - ROS Graph: architecture/ros_graph.md
+      - TF Tree: architecture/tf_tree.md
+      - Package Structure: architecture/package_structure.md
+      - Known Issues: architecture/issues.md
+  - Packages:
+      - bno055: packages/bno055.md
+      - ldlidar_stl_ros2: packages/ldlidar_stl_ros2.md
+      - sllidar_ros2: packages/sllidar_ros2.md
+      - ubot_bringup: packages/ubot_bringup.md
+      - ubot_control: packages/ubot_control.md
+      - ubot_debugger: packages/ubot_debugger.md
+      - ubot_description: packages/ubot_description.md
+  - Nodes:
+      - BNO055 Node: nodes/bno055_node.md
+      - Diagnostics Publisher: nodes/diag_publisher.md
+      - UbotHardware Interface: nodes/ubot_hardware_interface.md
+      - LDLidar Node: nodes/ldlidar_stl_ros2_node.md
+      - SLLidar Node: nodes/sllidar_node.md
+  - Interfaces:
+      - Topics: interfaces/topics.md
+      - Services: interfaces/services.md
+      - Actions: interfaces/actions.md
+      - Parameters: interfaces/parameters.md
+  - Hardware:
+      - Overview: hardware/overview.md
+      - URDF: hardware/urdf.md
+      - Sensors: hardware/sensors.md
+      - Embedded Firmware: hardware/embedded.md
+  - Launch Files:
+      - real_robot.launch.py: launch/real_robot.md
+      - sim.launch.py: launch/sim.md
+      - bno055.launch.py: launch/bno055.md
+      - laptop_slam_nav2.launch.py: launch/laptop_slam_nav2.md
+      - test_wheels.launch.py: launch/test_wheels.md
+      - display.launch.py: launch/display.md
+      - LDLidar vendor launches: launch/ldlidar_launches.md
+      - SLLidar vendor launches: launch/sllidar_launches.md
+  - Configuration:
+      - ubot_controllers.yaml: configuration/ubot_controllers.md
+      - sim_ubot_controllers.yaml: configuration/sim_ubot_controllers.md
+      - nav2_params.yaml: configuration/nav2_params.md
+      - sim_nav2_params.yaml: configuration/sim_nav2_params.md
+      - original_nav2_params.yaml: configuration/original_nav2_params.md
+      - real_ekf.yaml: configuration/real_ekf.md
+      - sim_ekf.yaml: configuration/sim_ekf.md
+      - bno055_params.yaml: configuration/bno055_params.md
+      - mapper_params_online_async.yaml: configuration/mapper_params_online_async.md
+  - Guides:
+      - Getting Started: guides/getting_started.md
+      - Building: guides/building.md
+      - Running: guides/running.md
+      - Calibration: guides/calibration.md
+      - Tuning: guides/tuning.md
+      - Troubleshooting: guides/troubleshooting.md
+  - Experiments:
+      - Overview: experiments/overview.md
+      - Logging: experiments/logging.md
+  - Research:
+      - Overview: research/overview.md
+      - Gaps: research/gaps.md
+      - Directions: research/directions.md
+      - Reading List: research/reading_list.md

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="ubot">
+
+    <xacro:property name="M_PI" value="3.1415926535897931" />
+
+    <xacro:arg name="robot_name" default="ubot_robot"/>
+    <xacro:arg name="prefix" default=""/>
+    <xacro:arg name="use_gazebo" default="false"/>
+
+
+
+    <xacro:include filename="$(find ubot_description)/urdf/body/ubot_base.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_lidar.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_ultrasonic.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_camera.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_imu.urdf.xacro"/>
+
+
+
+    <xacro:include filename="$(find ubot_description)/urdf/body/ubot_wheel.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/ros2_control/ubot_ros2_control.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/gazebo/ubot_gazebo.urdf.xacro"/>
+
+    <xacro:ubot_ros2_control prefix="$(arg prefix)" use_gazebo="$(arg use_gazebo)" />
+
+    <xacro:if value="$(arg use_gazebo)">
+        <xacro:ubot_gazebo prefix="$(arg prefix)" />
+    </xacro:if>
+
+    <xacro:ubot_base 
+    prefix="$(arg prefix)" />
+
+    <xacro:ubot_wheel 
+    prefix="$(arg prefix)" />
+
+    <xacro:ubot_lidar 
+    prefix="$(arg prefix)" />
+
+    <xacro:ubot_ultrasonic 
+    prefix="$(arg prefix)" />
+
+    <xacro:ubot_camera 
+    prefix="$(arg prefix)" />
+
+    <xacro:ubot_imu 
+    prefix="$(arg prefix)" />
+    
+
+</robot>

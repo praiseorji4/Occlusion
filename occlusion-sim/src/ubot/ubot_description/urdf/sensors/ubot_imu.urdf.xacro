@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="imu_mass" value="0.050" />  <!-- 9-DOF IMU module with PCB ~50 g -->
+  <xacro:property name="imu_length" value="0.0259" />
+  <xacro:property name="imu_width" value="0.0155" />
+  <xacro:property name="imu_height" value="0.015" />
+  <xacro:property name="com_x" value="-0.000082" />     <!--Center of Mass-->
+  <xacro:property name="com_y" value="-0.000041" /> 
+  <xacro:property name="com_z" value="0.010541" /> 
+  <xacro:property name="stand_height" value="${imu_height}" /> 
+
+  <xacro:property name="imu_x" value="${-(base_length/2 - 0.115)}" /> 
+  <xacro:property name="imu_y" value="${-(0.165 - base_width/2)}" /> 
+  <xacro:property name="imu_z" value="0.18" /> 
+
+
+
+
+
+  <xacro:macro name="ubot_imu" params="prefix">
+
+    <link name="${prefix}imu_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+
+        <geometry>
+            <box size="${imu_length} ${imu_width} ${imu_height}"/>
+        </geometry>
+
+        <!-- <geometry>
+          <cylinder radius="${imu_width/2}" length="${imu_height/2}"/>
+        </geometry>  -->
+
+
+        <material name="black">
+          <color rgba="0 0 0 0.5"/>
+        </material>
+      </visual>
+
+      <inertial>
+          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+          <mass value="${imu_mass}"/>
+          <inertia ixx="${(1/12) * imu_mass * ((imu_width * imu_width) + (imu_height * imu_height))}"  ixy="0.0"  ixz="0.0"  
+                    iyy="${(1/12) * imu_mass * ((imu_length * imu_length) + (imu_height * imu_height))}"  iyz="0.0" 
+                    izz="${(1/12) * imu_mass * ((imu_length * imu_length) + (imu_width * imu_width))}"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}imu_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}imu_link"/>
+      <origin xyz="${imu_x} ${imu_y} ${imu_z}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  
+  <xacro:macro name="ubot_camera_gazebo" params="prefix">
+    
+    <!-- ========================================
+         RGB-D CAMERA SENSOR (Gazebo Simulation)
+         Publishes:
+         - /camera/image_raw (RGB image)
+         - /camera/depth/image_raw (Depth image)
+         - /camera/depth/points (PointCloud2)
+         - /camera/camera_info
+    ======================================== -->
+    <gazebo reference="${prefix}camera_link">
+      <sensor name="${prefix}rgbd_camera" type="depth_camera">
+        <update_rate>30</update_rate>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        
+        <!-- Camera Parameters (Intel RealSense D435-like) -->
+        <camera name="${prefix}camera">
+          <horizontal_fov>1.211</horizontal_fov>  <!-- ~69.4 degrees -->
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>   <!-- Minimum depth: 10cm -->
+            <far>10.0</far>    <!-- Maximum depth: 10m -->
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+        
+        <!-- Depth Camera Specific Settings -->
+        <depth_camera>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </depth_camera>
+
+        <!-- Gazebo Sensors Plugin -->
+        <plugin filename="libgz-sim-sensors-system.so" 
+                name="gz::sim::systems::Sensors">
+          <render_engine>ogre2</render_engine>
+        </plugin>
+        
+        <gz_frame_id>${prefix}camera_depth_frame</gz_frame_id>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>

@@ -1,0 +1,19 @@
+# colcon build outputs (regenerable)
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# ROS2 runtime
+*.pyc
+
+# editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# colcon ignores
+COLCON_IGNORE

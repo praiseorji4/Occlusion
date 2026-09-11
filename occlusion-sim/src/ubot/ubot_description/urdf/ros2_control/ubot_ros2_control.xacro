@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<!--
+  ubot_ros2_control.xacro
+
+  Wires the URDF to either:
+    - The real hardware interface (UbotHardware, serial to ESP32), or
+    - The Gazebo sim plugin (gz_ros2_control/GazeboSimSystem)
+
+  Drive configuration: 4WD, front-wheel encoders only.
+  Rear joints carry state interfaces only (no command interface on real hw).
+  In simulation all 4 joints carry command + state interfaces.
+
+  IMPORTANT — joint structure rules:
+    <joint> tags MUST be siblings of <hardware>, not children of it.
+    The Gazebo plugin block lives inside <hardware> as a <plugin> tag only.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="ubot_ros2_control" params="prefix use_gazebo">
+    <ros2_control name="UbotSystem" type="system">
+
+      <!-- ══ Hardware plugin ══════════════════════════════════════ -->
+      <hardware>
+        <xacro:if value="${use_gazebo}">
+          <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+        </xacro:if>
+
+        <xacro:unless value="${use_gazebo}">
+          <plugin>ubot_control/UbotHardware</plugin>
+
+          <!-- Joint identity — must match URDF joint names exactly -->
+          <param name="left_wheel_name">front_left_wheel_joint</param>
+          <param name="right_wheel_name">front_right_wheel_joint</param>
+
+          <!-- Encoder counts per full revolution (calibrate with spin test) -->
+          <param name="enc_counts_per_rev_left">3956</param>
+          <param name="enc_counts_per_rev_right">3956</param>
+
+          <!-- Geometry — must match diff_controller.h on the ESP32 -->
+          <param name="wheel_separation">0.264204</param>
+          <param name="wheel_radius">0.033</param>
+
+          <!-- Serial port to ESP32 (check: ls /dev/ttyUSB*) -->
+          <param name="serial_device">/dev/ttyUSB0</param>
+          <param name="baud_rate">115200</param>
+          <param name="serial_timeout_ms">1000</param>
+
+          <!-- PID loop rate (Hz) — must match PID_RATE in diff_controller.h -->
+          <param name="loop_rate">30</param>
+
+          <!--
+            Diagnostic publish rate:
+              0  = disabled (no extra serial traffic)
+              N  = publish /ubot/diagnostics every N read() cycles
+            At loop_rate=30 Hz, diag_publish_rate=3 → ~10 Hz diagnostic topic.
+            Set to 0 if you use the Serial2 stream + PlotJuggler Serial IO instead.
+          -->
+          <param name="diag_publish_rate">0</param>
+        </xacro:unless>
+      </hardware>
+
+      <!-- ══ Joint interfaces ══════════════════════════════════════
+           Joints are siblings of <hardware>, NOT children of it.
+           Rear wheel command interfaces only exist in simulation.
+      ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Front left — commanded + measured -->
+      <joint name="${prefix}front_left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <!-- Front right — commanded + measured -->
+      <joint name="${prefix}front_right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <!--
+        Rear left — state only on real hardware (mirrors front left).
+        In Gazebo sim, diff_drive_controller drives all 4 joints, so
+        a command interface is needed there.
+      -->
+      <joint name="${prefix}rear_left_wheel_joint">
+        <xacro:if value="${use_gazebo}">
+          <command_interface name="velocity"/>
+        </xacro:if>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <!-- Rear right — same as rear left -->
+      <joint name="${prefix}rear_right_wheel_joint">
+        <xacro:if value="${use_gazebo}">
+          <command_interface name="velocity"/>
+        </xacro:if>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+    </ros2_control>
+  </xacro:macro>
+</robot>

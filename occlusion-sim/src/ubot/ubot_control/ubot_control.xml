@@ -1,0 +1,9 @@
+<library path="ubot_control">
+  <class name="ubot_control/UbotHardware"
+         type="ubot_control::UbotHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Diff drive hardware interface for Ubot robot
+    </description>
+  </class>
+</library>

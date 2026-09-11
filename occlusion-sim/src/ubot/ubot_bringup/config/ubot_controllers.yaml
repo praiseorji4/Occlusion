@@ -1,0 +1,105 @@
+# ubot_controllers.yaml
+#
+# Real-hardware controller configuration for Horizon (4WD, front encoders only).
+#
+# diff_drive_controller sees only the two front wheel joints — those are the
+# ones with real encoder feedback.  The rear joints have state interfaces
+# (mirrored from front) but no command interfaces, so they are correctly
+# excluded from the wheel lists below.
+#
+# ── Odometry debugging checklist ──────────────────────────────────
+# If /odom drifts, work through these in order:
+#
+#  1. wheel_radius:     drive exactly 1 m straight.
+#                       Check /diff_drive_controller/odom  pose.position.x
+#                       Too short → increase radius.  Too far → decrease.
+#
+#  2. wheel_separation: spin exactly 360° in place.
+#                       Check yaw returns to ≈ 0.0 rad.
+#                       Drifts positive → separation too small, increase.
+#                       Drifts negative → separation too large, decrease.
+#
+#  3. Both values must also match the ESP32 firmware (diff_controller.h)
+#     and the URDF (ubot_ros2_control.xacro) — keep all three in sync.
+#
+# ── PlotJuggler signals for odometry debugging ────────────────────
+# Subscribe to these topics:
+#   /diff_drive_controller/odom          → pose.position.x/y, twist.twist.linear.x
+#   /joint_states                        → velocity for all 4 joints
+#   /ubot/diagnostics (if enabled)       → per-wheel RPM setpoint vs actual
+#   Serial2 stream /dev/ttyUSB1          → full 14-field diagnostic frame at 30 Hz
+
+controller_manager:
+  ros__parameters:
+    update_rate: 30   # Hz — must match PID_RATE in diff_controller.h
+
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+
+diff_drive_controller:
+  ros__parameters:
+
+    # ── Wheels ──────────────────────────────────────────────────
+    # Only front wheels — they carry the encoders.
+    # Rear joints are state-only mirrors; do NOT add them here.
+    left_wheel_names:  ["front_left_wheel_joint"]
+    right_wheel_names: ["front_right_wheel_joint"]
+
+    # ── Geometry ────────────────────────────────────────────────
+    # These are the calibration constants.  Adjust via the checklist above.
+    # Keep in sync with:
+    #   - diff_controller.h  (WHEEL_RADIUS_M, WHEEL_SEPARATION_M)
+    #   - ubot_ros2_control.xacro  (wheel_radius, wheel_separation)
+    wheel_separation:  0.264204
+    wheel_radius:      0.033
+
+    # ── Velocity command limits ──────────────────────────────────
+    # Prevents the controller from sending commands the motors cannot follow,
+    # which would cause encoder slip and odometry error.
+    # Tune these to your robot's actual measured max values.
+    linear.x.max_velocity:          0.5    # m/s  — lower = more conservative
+    linear.x.min_velocity:         -0.5
+    linear.x.max_acceleration:      1.0    # m/s²
+    linear.x.min_acceleration:     -1.0
+    angular.z.max_velocity:          2.0   # rad/s
+    angular.z.min_velocity:         -2.0
+    angular.z.max_acceleration:      2.0
+    angular.z.min_acceleration:     -2.0
+
+    # ── Odometry ─────────────────────────────────────────────────
+    odom_frame_id:  odom
+    base_frame_id:  base_footprint
+    enable_odom_tf: true
+    open_loop:      false   # MUST be false — use encoder feedback, not cmd_vel
+
+    # How often the controller publishes /odom and /tf.
+    # Match update_rate above so you get one odom update per control cycle.
+    publish_rate: 30.0
+
+    # Encoder-based odometry (not velocity-based).
+    # With open_loop: false this should be true.
+    # Improves accuracy at low speeds and when velocity commands are noisy.
+    position_feedback: true
+
+    # Covariances — reflect real sensor quality, not defaults.
+    # These feed into robot_localization EKF if you add one later.
+    # x and y are coupled to encoder noise; yaw accumulates more error over time.
+    pose_covariance_diagonal:  [0.001, 0.001, 1e6, 1e6, 1e6, 0.01]
+    twist_covariance_diagonal: [0.001, 1e6,   1e6, 1e6, 1e6, 0.01]
+    #
+    # Note: indices 2 (z), 3 (roll), 4 (pitch) are set to 1e6 (effectively
+    # infinite uncertainty) because a ground robot cannot measure them.
+    # Leave index 5 (yaw) at 0.01 — encoders give reasonable heading.
+
+
+joint_state_broadcaster:
+  ros__parameters:
+    # Publishes all joints the hardware interface exports:
+    #   front_left, front_right, rear_left, rear_right
+    # Rear joints report the same position/velocity as their front counterpart
+    # (they share the same doubles in the hardware interface).
+    use_sim_time: false

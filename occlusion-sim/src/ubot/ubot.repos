@@ -1,0 +1,15 @@
+repositories:
+  # Folder Name         
+  lidar_driver:
+    type: git
+    url: https://github.com/lehoangan2906/Oradar-ms200-setup-file.git
+    version: main
+
+  mpu_9250_driver:
+    type: git
+    url: https://github.com/hiwad-aziz/ros2_mpu9250_driver
+    version: main
+
+  
+    
+  

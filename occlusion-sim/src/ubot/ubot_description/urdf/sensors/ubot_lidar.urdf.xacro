@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="lidar_mass" value="0.170" />  <!-- RPLIDAR A1/A2 ~170 g -->
+  <xacro:property name="lidar_length" value="0.035" />
+  <xacro:property name="lidar_width" value="0.035" />
+  <xacro:property name="lidar_height" value="0.02580" />
+  <xacro:property name="com_x" value="-0.000082" />     <!--Center of Mass-->
+  <xacro:property name="com_y" value="-0.000041" /> 
+  <xacro:property name="com_z" value="0.010541" /> 
+  <xacro:property name="stand_height" value="${lidar_height}" /> 
+
+  <xacro:property name="lidar_x" value="-0.14250" /> 
+  <xacro:property name="lidar_y" value="0.0" /> 
+  <xacro:property name="lidar_z" value="${base_height + lidar_height/2}" /> 
+
+
+
+
+
+  <xacro:macro name="ubot_lidar" params="prefix">
+
+    <link name="${prefix}lidar_link">
+      <visual>
+        <origin xyz="0 0 ${-lidar_height/4}" rpy="0 0 0"/>
+        <!-- <geometry>
+            <mesh filename="file://$(find ubot_description)/meshes/lidar.stl" scale="0.001 0.001 0.001"/>
+        </geometry> -->
+
+        <geometry>
+          <cylinder radius="${lidar_width/2}" length="${lidar_height/2}"/>
+        </geometry> 
+
+
+        <material name="black">
+          <color rgba="0 0 0 0.5"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 ${-lidar_height/4}" rpy="0 0 0"/>
+
+        <geometry>
+          <cylinder radius="${lidar_width/2}" length="${lidar_height/2}"/>
+        </geometry> 
+
+      </collision>
+
+      <inertial>
+          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+          <mass value="${lidar_mass}"/>
+          <!-- Cylinder inertia: r = lidar_width/2, h = lidar_height -->
+          <inertia ixx="${(1/12) * lidar_mass * (3*(lidar_width/2)*(lidar_width/2) + lidar_height*lidar_height)}"  ixy="0.0"  ixz="0.0"
+                    iyy="${(1/12) * lidar_mass * (3*(lidar_width/2)*(lidar_width/2) + lidar_height*lidar_height)}"  iyz="0.0"
+                    izz="${(1/2) * lidar_mass * (lidar_width/2)*(lidar_width/2)}"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}lidar_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}lidar_link"/>
+      <origin xyz="${lidar_x} ${lidar_y} ${lidar_z}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

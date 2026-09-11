@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="ubot_gazebo" params="prefix">
+        <gazebo>
+            <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+            <parameters>$(find ubot_bringup)/config/sim_ubot_controllers.yaml</parameters>
+            </plugin>
+        </gazebo>
+
+        <!-- IMPORTANT PLUGIN -->
+        <gazebo>
+            <plugin
+                filename="gz-sim-sensors-system"
+                name="gz::sim::systems::Sensors">
+                <render_engine>ogre2</render_engine>
+            </plugin>
+        </gazebo>     
+
+
+        <!-- FIXED LIDAR CONFIGURATION -->
+        <gazebo reference="${prefix}lidar_link">
+            <sensor name="${prefix}lidar_sensor" type="gpu_lidar">
+                <topic>/scan</topic> 
+                <update_rate>10</update_rate>
+                <always_on>true</always_on>
+                <visualize>true</visualize>
+                <lidar>
+                    <scan>
+                        <horizontal>
+                            <samples>720</samples>
+                            <resolution>1</resolution>
+                            <min_angle>-3.14159</min_angle>
+                            <max_angle>3.14159</max_angle>
+                        </horizontal>
+                    </scan>
+                    <range>
+                        <min>0.2</min> 
+                        <max>30.0</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.01</stddev>
+                    </noise>
+                </lidar>
+                <gz_frame_id>${prefix}lidar_link</gz_frame_id>
+            </sensor>
+        </gazebo>
+
+
+        <!-- RGB-D CAMERA SENSOR - FIXED -->
+        <gazebo reference="${prefix}camera_link">
+            <sensor name="${prefix}rgbd_camera" type="rgbd_camera">
+                <topic>${prefix}camera</topic>
+                <update_rate>30</update_rate>
+                <always_on>1</always_on>
+                <visualize>true</visualize>
+
+                <camera name="${prefix}camera">
+                    <horizontal_fov>1.211</horizontal_fov>
+                    <image>
+                        <width>640</width>
+                        <height>480</height>
+                        <format>R8G8B8</format>
+                    </image>
+                    <clip>
+                        <near>0.1</near>
+                        <far>10.0</far>
+                    </clip>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.007</stddev>
+                    </noise>
+                    <depth_camera>
+                        <clip>
+                            <near>0.1</near>
+                            <far>10.0</far>
+                        </clip>
+                    </depth_camera>
+                </camera>
+
+                <gz_frame_id>${prefix}camera_depth_frame</gz_frame_id>
+            </sensor>
+        </gazebo>
+
+
+        <!-- IMU SENSOR (MPU 9250 simulation) -->
+        <gazebo reference="${prefix}imu_link">
+            <sensor name="${prefix}imu_sensor" type="imu">
+                <topic>/imu</topic>
+                <update_rate>100</update_rate>
+                <always_on>1</always_on>
+                <visualize>false</visualize>
+                
+                <imu>
+                    <!-- Angular velocity (gyroscope) -->
+                    <angular_velocity>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.009</stddev>
+                                <bias_mean>0.00075</bias_mean>
+                                <bias_stddev>0.005</bias_stddev>
+                                <dynamic_bias_stddev>0.00002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>400.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.009</stddev>
+                                <bias_mean>0.00075</bias_mean>
+                                <bias_stddev>0.005</bias_stddev>
+                                <dynamic_bias_stddev>0.00002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>400.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.009</stddev>
+                                <bias_mean>0.00075</bias_mean>
+                                <bias_stddev>0.005</bias_stddev>
+                                <dynamic_bias_stddev>0.00002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>400.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </z>
+                    </angular_velocity>
+                    
+                    <!-- Linear acceleration (accelerometer) -->
+                    <linear_acceleration>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.017</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                                <dynamic_bias_stddev>0.0002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.017</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                                <dynamic_bias_stddev>0.0002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>0.017</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                                <dynamic_bias_stddev>0.0002</dynamic_bias_stddev>
+                                <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
+                            </noise>
+                        </z>
+                    </linear_acceleration>
+                </imu>
+                
+                <gz_frame_id>${prefix}imu_link</gz_frame_id>
+            </sensor>
+        </gazebo>
+
+        <xacro:macro name="wheel_gazebo" params="wheel_name">
+            <gazebo reference="${prefix}${wheel_name}_link">
+                <mu1>1.1</mu1> 
+                <mu2>1.1</mu2>
+                <kp>1000000.0</kp>
+                <kd>10.0</kd>
+                <minDepth>0.001</minDepth>
+                <maxVel>0.1</maxVel>
+                <fdir1>1 0 0</fdir1>
+                <material>Gazebo/Grey</material>
+            </gazebo>
+        </xacro:macro>
+
+        <xacro:wheel_gazebo wheel_name="front_left_wheel"/>
+        <xacro:wheel_gazebo wheel_name="rear_left_wheel"/>
+        <xacro:wheel_gazebo wheel_name="front_right_wheel"/>
+        <xacro:wheel_gazebo wheel_name="rear_right_wheel"/>
+    </xacro:macro>
+</robot>
