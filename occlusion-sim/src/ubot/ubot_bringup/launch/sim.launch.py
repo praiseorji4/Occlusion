@@ -31,11 +31,11 @@ def generate_launch_description():
         }]
     )
     
-    # 2. Gazebo
+    #2. Gazebo
     world_file = os.path.join(
         get_package_share_directory('ubot_bringup'),
         'worlds',
-        'basic.sdf'
+        'sonoma_occlusion.sdf'
     )
 
     # 2. Modify the gazebo launch description
@@ -76,7 +76,6 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
     
-    # 4. Spawn Robot Entity
     spawn_entity = Node(
         package='ros_gz_sim',
         executable='create',
@@ -85,7 +84,10 @@ def generate_launch_description():
             '-topic', 'robot_description', 
             '-name', 'ubot',
             '-world', 'sensors', 
-            '-z', '0.1'
+            '-x', '272.0',
+            '-y', '-136.0',
+            '-z', '3.45',
+            '-Y', '2.40'
         ],
     )
     
