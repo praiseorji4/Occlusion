@@ -18,7 +18,8 @@ def generate_launch_description():
         Command([
             'xacro ',
             os.path.join(pkg_description, 'urdf', 'body', 'ubot_robot.urdf.xacro'),
-            ' use_gazebo:=true'
+            ' use_gazebo:=true',
+            ' sensor_profile:=', LaunchConfiguration('sensor_profile')
         ]),
         value_type=str
     )
@@ -75,6 +76,10 @@ def generate_launch_description():
         # advertise the same world name, the robot is spawned into one of them while you
         # watch the other, and it looks like the spawn silently failed.
         DeclareLaunchArgument('start_gazebo', default_value='true'),
+        # sensor_profile:=fast halves the camera resolution and lowers sensor rates.
+        # Rendering the depth camera + lidar is what limits simulation speed: in the full
+        # raceway world 'full' runs near RTF 0.2 without GPU passthrough (/scan ~2 Hz).
+        DeclareLaunchArgument('sensor_profile', default_value='full'),
     ]
 
     #    Gazebo finds model://apartment through GZ_SIM_RESOURCE_PATH, which must point at
