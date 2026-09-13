@@ -88,6 +88,12 @@ def generate_launch_description():
         'GZ_SIM_RESOURCE_PATH',
         os.path.join(get_package_share_directory('ubot_bringup'), 'models'))
 
+    #    Short-name aliases for Fuel models whose materials reference e.g. model://suv/...
+    #    Created by scripts/fix_fuel_textures.sh; harmless if the directory does not exist.
+    gz_fuel_aliases = AppendEnvironmentVariable(
+        'GZ_SIM_RESOURCE_PATH',
+        os.path.join(os.path.expanduser('~'), '.gz', 'fuel_aliases'))
+
     world_file = PathJoinSubstitution([
         get_package_share_directory('ubot_bringup'), 'worlds',
         [world, TextSubstitution(text='.sdf')],
@@ -266,6 +272,7 @@ def generate_launch_description():
 
     return LaunchDescription(declare_args + [
         gz_resource_path,
+        gz_fuel_aliases,
         node_robot_state_publisher,
         gazebo,
         bridge,

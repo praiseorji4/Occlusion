@@ -64,10 +64,13 @@
 
 
     <!-- Static Heavy Occlusion (Behind Hatchback) -->
+    <!-- "Male visitor" is an ACTOR, not a model: <include> silently drops it, so this
+         pedestrian never actually appeared in the scene. "Standing person" is a real
+         model whose origin is at the feet, so z matches the local ground. -->
     <include>
       <name>heavily_occluded_pedestrian</name>
-      <pose>270.5 -128 4.1 0 0 0.8</pose>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Male visitor</uri>
+      <pose>270.5 -128 3.40 0 0 0.8</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standing person</uri>
     </include>
 
     <!-- Verified Visible Pedestrian Location -->
