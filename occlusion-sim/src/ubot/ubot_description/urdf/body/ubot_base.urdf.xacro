@@ -1,58 +1,97 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-<xacro:property name="base_width" value="0.2371" />
-<xacro:property name="base_length" value="0.41" />
-<xacro:property name="base_height" value="0.2025" />
-<xacro:property name="com_x" value="0.00489" />     <!--Center of Mass-->
-<xacro:property name="com_y" value="-0.00007433" /> 
-<xacro:property name="com_z" value="0.001" /> 
-<xacro:property name="base_mass" value="3.0" />
+<!--
+  Inspection Robot 01 chassis (exported from Fusion 360, see meshes/inspection/).
 
+  Frame convention (REP-105):
+    base_footprint : on the ground, centred between the four wheels
+    base_link      : centred between the four wheels, at the underside of the chassis
+                     X forward (OAK-D side), Y left, Z up
+
+  The chassis mesh is exported in Fusion world coordinates (mm). base_link sits at
+  Fusion point (162.38, 0, 0) mm, hence the mesh origin offset below.
+-->
+<xacro:property name="base_mesh_x" value="-0.16238" />       <!-- Fusion origin -> base_link -->
+<xacro:property name="ground_clearance" value="0.066375" />  <!-- base_link height above ground (wheel r 32.5 mm + axle 33.875 mm below chassis) -->
+
+<!-- Mass properties from CAD (PLA printed parts at 100% infill, aluminium motors, LCD).
+     Real robot will be heavier (battery, Pi, wiring) and lighter where printed at partial infill. -->
+<xacro:property name="base_mass" value="1.757604" />
+<xacro:property name="base_com_x" value="0.010371" />
+<xacro:property name="base_com_y" value="-0.000052" />
+<xacro:property name="base_com_z" value="0.051079" />
+
+<!-- Simplified collision boxes (the full mesh has ~52k triangles, too heavy for physics) -->
+<xacro:property name="body_length" value="0.357" />
+<xacro:property name="body_width" value="0.220" />
+<xacro:property name="body_height" value="0.173" />
+<xacro:property name="body_x" value="0.00088" />
+<xacro:property name="mast_length" value="0.102" />
+<xacro:property name="mast_width" value="0.066" />
+<xacro:property name="mast_height" value="0.107" />
+<xacro:property name="mast_x" value="0.0610" />
+<xacro:property name="mast_z" value="0.2265" />
+
+<!-- Motors and holders hang below the chassis (z -0.048 .. 0), i.e. 18 mm above the ground. -->
+<xacro:property name="under_length" value="0.336" />
+<xacro:property name="under_width" value="0.232" />
+<xacro:property name="under_height" value="0.048" />
+<xacro:property name="under_z" value="-0.024" />
 
 
 <xacro:macro name="ubot_base" params="prefix">
-    <link name="base_footprint"/>
+    <link name="${prefix}base_footprint"/>
     <link name="${prefix}base_link">
         <visual>
-            <!-- <geometry>
-                <mesh filename="file://$(find ubot_description)/meshes/latest.stl" scale="1 1 1"/>
-            </geometry> -->
+            <origin xyz="${base_mesh_x} 0 0" rpy="0 0 0"/>
             <geometry>
-                <box size="${base_length} ${base_width} ${base_height}"/>
+                <mesh filename="file://$(find ubot_description)/meshes/inspection/base.stl" scale="0.001 0.001 0.001"/>
             </geometry>
-            <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
-            <material name="dark_gray">
-                <color rgba="0.2 0.2 0.2 0.5"/>
+            <material name="chassis_gray">
+                <color rgba="0.75 0.75 0.75 1"/>
             </material>
         </visual>
 
         <collision>
+            <origin xyz="${body_x} 0 ${body_height/2}" rpy="0 0 0"/>
             <geometry>
-                <box size="${base_length - 0.01} ${base_width - 0.01} ${base_height - 0.01}"/>
+                <box size="${body_length} ${body_width} ${body_height}"/>
             </geometry>
-            <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
         </collision>
+        <collision>
+            <origin xyz="${mast_x} 0 ${mast_z}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${mast_length} ${mast_width} ${mast_height}"/>
+            </geometry>
+        </collision>
+        <collision>
+            <origin xyz="0 0 ${under_z}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${under_length} ${under_width} ${under_height}"/>
+            </geometry>
+        </collision>
+
         <inertial>
-            <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+            <origin xyz="${base_com_x} ${base_com_y} ${base_com_z}" rpy="0 0 0"/>
             <mass value="${base_mass}"/>
-            <inertia ixx="${(1/12) * base_mass * ((base_width * base_width) + (base_height * base_height))}"  ixy="0.0"  ixz="0.0"  
-                     iyy="${(1/12) * base_mass * ((base_length * base_length) + (base_height * base_height))}"  iyz="0.0" 
-                     izz="${(1/12) * base_mass * ((base_length * base_length) + (base_width * base_width))}"/>
+            <inertia ixx="0.019834" ixy="-0.000003" ixz="-0.001273"
+                     iyy="0.034307" iyz="0.000005"
+                     izz="0.033227"/>
         </inertial>
     </link>
     <gazebo reference="${prefix}base_link">
         <visual>
             <material>
-                <ambient>0.5 0.5 0.5 0.5</ambient>
-                <diffuse>0.5 0.5 0.5 0.5</diffuse>
-                <specular>0.2 0.2 0.2 0.5</specular>
+                <ambient>0.6 0.6 0.6 1</ambient>
+                <diffuse>0.75 0.75 0.75 1</diffuse>
+                <specular>0.2 0.2 0.2 1</specular>
             </material>
         </visual>
     </gazebo>
     <joint name="${prefix}base_joint" type="fixed">
         <parent link="${prefix}base_footprint"/>
         <child link="${prefix}base_link"/>
-        <origin xyz="0 0 ${wheel_radius - wheel_zoff}" rpy="0 0 0"/>
+        <origin xyz="0 0 ${ground_clearance}" rpy="0 0 0"/>
   </joint>
 </xacro:macro>
 </robot>

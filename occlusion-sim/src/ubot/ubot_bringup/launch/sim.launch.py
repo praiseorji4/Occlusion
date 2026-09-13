@@ -1,10 +1,12 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler
+from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import (Command, LaunchConfiguration, PathJoinSubstitution,
+                                  PythonExpression, TextSubstitution)
+from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -31,18 +33,62 @@ def generate_launch_description():
         }]
     )
     
-    #2. Gazebo
-    world_file = os.path.join(
-        get_package_share_directory('ubot_bringup'),
-        'worlds',
-        'sonoma_occlusion.sdf'
-    )
+    # 2. Gazebo world.
+    #    'world' picks the .sdf file in ubot_bringup/worlds (without the extension);
+    #    'world_name' is the <world name='...'> declared INSIDE that file, which the
+    #    spawner needs because it addresses the world by name, not by filename.
+    #    Indoor apartment world instead of the raceway:
+    #      ros2 launch ubot_bringup sim.launch.py world:=apartment world_name:=apartment \
+    #          spawn_x:=5.0 spawn_y:=0.0 spawn_z:=0.1 spawn_yaw:=1.5708
+    world = LaunchConfiguration('world')
+    world_name = LaunchConfiguration('world_name')
+    spawn_x = LaunchConfiguration('spawn_x')
+    spawn_y = LaunchConfiguration('spawn_y')
+    spawn_z = LaunchConfiguration('spawn_z')
+    spawn_yaw = LaunchConfiguration('spawn_yaw')
 
-    # 2. Modify the gazebo launch description
+    declare_args = [
+        DeclareLaunchArgument('world', default_value='sonoma_occlusion',
+                              description="World FILE in ubot_bringup/worlds, without .sdf"),
+        # The spawner addresses the world by the <world name='...'> INSIDE the sdf, which is
+        # not always the filename: sonoma_occlusion.sdf declares <world name='sensors'>.
+        DeclareLaunchArgument('world_name', default_value='sensors',
+                              description="<world name> inside that sdf (spawner addresses it by name)"),
+        # Default spawn: on the Sonoma pit lane beside the occlusion scene (cars/pedestrians
+        # sit around x 245..275, y -132..-115, ground z ~3.3).
+        DeclareLaunchArgument('spawn_x', default_value='272.0'),
+        DeclareLaunchArgument('spawn_y', default_value='-136.0'),
+        DeclareLaunchArgument('spawn_z', default_value='3.45'),
+        DeclareLaunchArgument('spawn_yaw', default_value='2.40'),
+        # The raceway world is expensive. Turning these off leaves just Gazebo + the robot,
+        # which is usually what you want for occlusion capture, and makes startup reliable:
+        #   ros2 launch ubot_bringup sim.launch.py use_slam:=false use_nav2:=false use_rviz:=false
+        DeclareLaunchArgument('use_slam', default_value='true'),
+        DeclareLaunchArgument('use_nav2', default_value='true'),
+        DeclareLaunchArgument('use_rviz', default_value='true'),
+        # headless:=true runs the Gazebo server only (no GUI window). Sensors still work.
+        # Much lighter, and the only way to run on a machine without a display.
+        DeclareLaunchArgument('headless', default_value='false'),
+    ]
+
+    #    Gazebo finds model://apartment through GZ_SIM_RESOURCE_PATH, which must point at
+    #    the directory CONTAINING the model folder (…/share/ubot_bringup/models).
+    gz_resource_path = AppendEnvironmentVariable(
+        'GZ_SIM_RESOURCE_PATH',
+        os.path.join(get_package_share_directory('ubot_bringup'), 'models'))
+
+    world_file = PathJoinSubstitution([
+        get_package_share_directory('ubot_bringup'), 'worlds',
+        [world, TextSubstitution(text='.sdf')],
+    ])
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
-        launch_arguments={'gz_args': f'-r -v 4 {world_file}'}.items(),
+        launch_arguments={'gz_args': [
+            TextSubstitution(text='-r -v 4 '),
+            PythonExpression(["'-s ' if '", LaunchConfiguration('headless'), "'.lower() in ('true','1') else ''"]),
+            world_file]}.items(),
     )
 
 
@@ -76,18 +122,19 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
     
+    # 4. Spawn Robot Entity
     spawn_entity = Node(
         package='ros_gz_sim',
         executable='create',
         output='screen',
         arguments=[
-            '-topic', 'robot_description', 
+            '-topic', 'robot_description',
             '-name', 'ubot',
-            '-world', 'sensors', 
-            '-x', '272.0',
-            '-y', '-136.0',
-            '-z', '3.45',
-            '-Y', '2.40'
+            '-world', world_name,
+            '-x', spawn_x,
+            '-y', spawn_y,
+            '-z', spawn_z,
+            '-Y', spawn_yaw,
         ],
     )
     
@@ -96,10 +143,18 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "joint_state_broadcaster", 
-            "--param-file", 
-            os.path.join(get_package_share_directory('ubot_bringup'), 
-                        'config', 'sim_ubot_controllers.yaml')
+            "joint_state_broadcaster",
+            "--param-file",
+            os.path.join(get_package_share_directory('ubot_bringup'),
+                        'config', 'sim_ubot_controllers.yaml'),
+            # A heavy world (Sonoma) needs ~15 s before gz_ros2_control has the robot
+            # description and starts controller_manager services. The spawner's default
+            # 10 s timeout expires first and it dies with "Failed to acquire lock".
+            "--controller-manager-timeout", "180",
+            "--switch-timeout", "60",
+            # gz_ros2_control answers switch_controller from the simulation loop, which in a
+            # heavy world can stall well past the 10 s default and kill the spawner.
+            "--service-call-timeout", "60",
         ],
         parameters=[{'use_sim_time': True}]
     )
@@ -108,10 +163,15 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "diff_drive_controller", 
-            "--param-file", 
-            os.path.join(get_package_share_directory('ubot_bringup'), 
-                        'config', 'sim_ubot_controllers.yaml')
+            "diff_drive_controller",
+            "--param-file",
+            os.path.join(get_package_share_directory('ubot_bringup'),
+                        'config', 'sim_ubot_controllers.yaml'),
+            "--controller-manager-timeout", "180",
+            "--switch-timeout", "60",
+            # gz_ros2_control answers switch_controller from the simulation loop, which in a
+            # heavy world can stall well past the 10 s default and kill the spawner.
+            "--service-call-timeout", "60",
         ],
         parameters=[{'use_sim_time': True}]
     )
@@ -150,7 +210,8 @@ def generate_launch_description():
         launch_arguments={
             'slam_params_file': slam_params_file,
             'use_sim_time': 'true'
-        }.items()
+        }.items(),
+        condition=IfCondition(LaunchConfiguration('use_slam'))
     )
 
     # 8. RViz2 Node
@@ -159,7 +220,8 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         arguments=['-d', rviz_config_file],
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('use_rviz'))
     )
 
     nav2_params_path = os.path.join(
@@ -187,10 +249,11 @@ def generate_launch_description():
             'use_sim_time': 'true',
             'params_file': nav2_params_path
         }.items(),
-
+        condition=IfCondition(LaunchConfiguration('use_nav2'))
     )
 
-    return LaunchDescription([
+    return LaunchDescription(declare_args + [
+        gz_resource_path,
         node_robot_state_publisher,
         gazebo,
         bridge,

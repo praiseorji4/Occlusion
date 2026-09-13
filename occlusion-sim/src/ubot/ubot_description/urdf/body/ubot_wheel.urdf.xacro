@@ -1,182 +1,70 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:property name="wheel_radius" value="0.033" />
-
-  <xacro:property name="wheel_separation" value="0.264204" />  <!-- 2 * wheel_yoff = 2 * (base_width/2 + motor_cylinder_length) -->
+  <!-- Geometry from CAD (Inspection Robot 01). Joint origins sit exactly on each motor axle. -->
+  <xacro:property name="wheel_radius" value="0.0325" />
   <xacro:property name="wheel_width" value="0.0264" />
-  <xacro:property name="wheel_mass" value="0.4" />
+  <xacro:property name="wheel_xoff" value="0.1275" />       <!-- half wheelbase (0.255 m axle to axle) -->
+  <xacro:property name="wheel_yoff" value="0.1132" />       <!-- half track, wheel centre plane -->
+  <xacro:property name="wheel_zoff" value="-0.033875" />    <!-- axle below base_link -->
+  <xacro:property name="wheel_separation" value="${2*wheel_yoff}" />  <!-- geometric 0.2264 m -->
 
-  <xacro:property name="back_to_front_wheel" value="0.3043" />
-  <xacro:property name="back_to_rear_wheel" value="0.056536" />
+  <xacro:property name="wheel_mass" value="0.044215" />
+  <xacro:property name="wheel_ixx" value="0.000018" />
+  <xacro:property name="wheel_iyy" value="0.000032" />      <!-- about the axle -->
+  <xacro:property name="wheel_izz" value="0.000018" />
 
+  <!-- Wheel meshes are in Fusion world coordinates (mm): mesh_x/mesh_y is the wheel
+       centre in that frame, so the visual origin is its negative. -->
+  <!--
+    mimics: name of the joint this wheel's joint follows, or "" for a driven/sensed wheel.
 
+    The real robot commands only the FRONT motors; the ESP32 mirrors each front command to
+    the rear motor on the same side, and only the front wheels carry encoders. Declaring the
+    rear joints as URDF mimic joints reproduces that exactly: gz_ros2_control copies the
+    front command onto the rear joint, and the rear joints expose no command interface.
+  -->
+  <xacro:macro name="ubot_single_wheel" params="prefix name x_sign y_sign mesh mesh_x mesh_y mimics:=''">
+    <link name="${prefix}${name}_wheel_link">
+      <visual>
+        <origin xyz="${-mesh_x} ${-mesh_y} ${-wheel_zoff}" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find ubot_description)/meshes/inspection/${mesh}.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="dark_gray">
+          <color rgba="0.2 0.2 0.2 1"/>
+        </material>
+      </visual>
 
-  <xacro:property name="wheel_xoff1" value="${back_to_front_wheel - base_length/2}" />
-  <xacro:property name="wheel_xoff2" value="${base_length/2 - back_to_rear_wheel}" />
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
 
-  <xacro:property name="motor_cylinder_length" value="0.013552" />
-  <xacro:property name="wheel_yoff" value="${base_width/2 + motor_cylinder_length}" />
-  <xacro:property name="wheel_zoff" value="0.0188" /> <!--0.018805-->
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="${wheel_ixx}" ixy="0" ixz="0" iyy="${wheel_iyy}" iyz="0" izz="${wheel_izz}"/>
+      </inertial>
+    </link>
 
-
+    <joint name="${prefix}${name}_wheel_joint" type="continuous">
+      <axis xyz="0 1 0"/>
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}${name}_wheel_link"/>
+      <origin xyz="${x_sign*wheel_xoff} ${y_sign*wheel_yoff} ${wheel_zoff}" rpy="0 0 0"/>
+      <xacro:unless value="${mimics == ''}">
+        <mimic joint="${prefix}${mimics}" multiplier="1.0" offset="0.0"/>
+      </xacro:unless>
+    </joint>
+  </xacro:macro>
 
   <xacro:macro name="ubot_wheel" params="prefix">
-    <link name="${prefix}front_left_wheel_link">
-      <visual>
-        <!-- <geometry>
-            <mesh filename="package://ubot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
-        </geometry> -->   
-        <!-- <origin xyz="0 0 0" rpy="0 0 ${-pi/2}"/> -->
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-        <material name="dark_gray">
-          <color rgba="0.2 0.2 0.2 1"/>
-        </material>
-      </visual>
-
-      <collision>
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-      </collision>
-
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="${wheel_mass}"/>
-        <inertia
-          ixx="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" ixy="0" ixz="0"
-          iyy="${(wheel_mass/2.0) * (wheel_radius*wheel_radius)}" iyz="0"
-          izz="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"/>
-      </inertial>
-    </link>
-
-    <joint name="${prefix}front_left_wheel_joint" type="continuous">
-      <axis xyz="0 1 0"/>
-      <parent link="${prefix}base_link"/>
-      <child link="${prefix}front_left_wheel_link"/>
-      <!-- <origin xyz="${x_reflect*(wheel_xoff) } ${y_reflect*(wheel_yoff)} ${-wheel_zoff}" rpy="0 0 0"/> -->
-      <origin xyz="${wheel_xoff1} ${wheel_yoff} ${wheel_zoff}" rpy="0 0 0"/>
-    </joint>
-
-    <link name="${prefix}front_right_wheel_link">
-      <visual>
-        <!-- <geometry>
-            <mesh filename="package://ubot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/> -->
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-        <material name="dark_gray">
-          <color rgba="0.2 0.2 0.2 1"/>
-        </material>
-      </visual>
-
-      <collision>
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-      </collision>
-
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="${wheel_mass}"/>
-        <inertia
-          ixx="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" ixy="0" ixz="0"
-          iyy="${(wheel_mass/2.0) * (wheel_radius*wheel_radius)}" iyz="0"
-          izz="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"/>
-      </inertial>
-    </link>
-
-    <joint name="${prefix}front_right_wheel_joint" type="continuous">
-      <axis xyz="0 1 0"/>
-      <parent link="${prefix}base_link"/>
-      <child link="${prefix}front_right_wheel_link"/>
-      <origin xyz="${wheel_xoff1} ${-wheel_yoff} ${wheel_zoff}" rpy="0 0 0"/>
-    </joint>
-
-    <link name="${prefix}rear_left_wheel_link">
-      <visual>
-        <!-- <geometry>
-            <mesh filename="package://ubot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/> -->
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-        <material name="dark_gray">
-          <color rgba="0.2 0.2 0.2 1"/>
-        </material>
-      </visual>
-
-      <collision>
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-      </collision>
-
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="${wheel_mass}"/>
-        <inertia
-          ixx="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" ixy="0" ixz="0"
-          iyy="${(wheel_mass/2.0) * (wheel_radius*wheel_radius)}" iyz="0"
-          izz="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"/>
-      </inertial>
-    </link>
-
-    <joint name="${prefix}rear_left_wheel_joint" type="continuous">
-      <parent link="${prefix}base_link"/>
-      <child link="${prefix}rear_left_wheel_link"/>
-      <origin xyz="${-wheel_xoff2} ${wheel_yoff} ${wheel_zoff}" rpy="0 0 0"/>
-      <axis xyz="0 1 0"/>
-    </joint>
-
-    <link name="${prefix}rear_right_wheel_link">
-      <visual>
-        <!-- <geometry>
-            <mesh filename="package://ubot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/> -->
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-        <material name="dark_gray">
-          <color rgba="0.2 0.2 0.2 1"/>
-        </material>
-      </visual>
-
-      <collision>
-        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-      </collision>
-
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="${wheel_mass}"/>
-        <inertia
-          ixx="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" ixy="0" ixz="0"
-          iyy="${(wheel_mass/2.0) * (wheel_radius*wheel_radius)}" iyz="0"
-          izz="${(wheel_mass/12.0) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"/>
-      </inertial>
-    </link>
-
-    <joint name="${prefix}rear_right_wheel_joint" type="continuous">
-      <parent link="${prefix}base_link"/>
-      <child link="${prefix}rear_right_wheel_link"/>
-      <origin xyz="${-wheel_xoff2} ${-wheel_yoff} ${wheel_zoff}" rpy="0 0 0"/>
-      <axis xyz="0 1 0"/>
-    </joint>
+    <xacro:ubot_single_wheel prefix="${prefix}" name="front_left"  x_sign="1"  y_sign="1"  mesh="wheel_front_left"  mesh_x="0.28988" mesh_y="0.1132"/>
+    <xacro:ubot_single_wheel prefix="${prefix}" name="front_right" x_sign="1"  y_sign="-1" mesh="wheel_front_right" mesh_x="0.28988" mesh_y="-0.1132"/>
+    <xacro:ubot_single_wheel prefix="${prefix}" name="rear_left"   x_sign="-1" y_sign="1"  mesh="wheel_rear_left"   mesh_x="0.03488" mesh_y="0.1132"  mimics="front_left_wheel_joint"/>
+    <xacro:ubot_single_wheel prefix="${prefix}" name="rear_right"  x_sign="-1" y_sign="-1" mesh="wheel_rear_right"  mesh_x="0.03488" mesh_y="-0.1132" mimics="front_right_wheel_joint"/>
   </xacro:macro>
 </robot>

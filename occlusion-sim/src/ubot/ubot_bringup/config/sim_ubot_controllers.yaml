@@ -14,13 +14,22 @@ controller_manager:
 
 diff_drive_controller:
   ros__parameters:
-    # Match the joint names exactly as defined in your ubot_wheel.urdf.xacro
-    left_wheel_names: ["front_left_wheel_joint", "rear_left_wheel_joint" ]
-    right_wheel_names: ["front_right_wheel_joint", "rear_right_wheel_joint"]
+    # Front wheels only — matches the real robot, where only the front motors are
+    # commanded and only they carry encoders. The rear wheels are passive followers.
+    left_wheel_names: ["front_left_wheel_joint"]
+    right_wheel_names: ["front_right_wheel_joint"]
 
-    # Geometric parameters (based on your URDF properties)
-    wheel_separation: 0.264204 # 2 * wheel_yoff
-    wheel_radius: 0.033    # wheel_radius
+    # NOT the geometric track (0.2264 m). A 4-wheel skid-steer must scrub its tyres to
+    # turn, so it rotates slower than the geometry predicts and the odometry needs the
+    # EFFECTIVE separation. Deliberately the same value as the real robot
+    # (ubot_controllers.yaml / diff_controller.h): the sim's lateral wheel friction
+    # (mu2 = 0.12 in ubot_gazebo.urdf.xacro) was tuned so this value is correct in sim too.
+    # Verified against Gazebo ground truth: actual/commanded yaw rate = 1.001.
+    # If the real robot is recalibrated to a different value, retune mu2 rather than
+    # letting sim and real drift apart (higher mu2 = less scrub = larger effective
+    # separation; mu2 = 1.1 locks the wheels entirely).
+    wheel_separation: 0.264204
+    wheel_radius: 0.0325   # wheel_radius (Inspection Robot 01 CAD)
 
     # Odometry settings
     publish_rate: 50.0
