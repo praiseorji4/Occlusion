@@ -83,18 +83,12 @@
         a command interface is needed there.
       -->
       <joint name="${prefix}rear_left_wheel_joint">
-        <xacro:if value="${use_gazebo}">
-          <command_interface name="velocity"/>
-        </xacro:if>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
       </joint>
 
       <!-- Rear right — same as rear left -->
       <joint name="${prefix}rear_right_wheel_joint">
-        <xacro:if value="${use_gazebo}">
-          <command_interface name="velocity"/>
-        </xacro:if>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
       </joint>

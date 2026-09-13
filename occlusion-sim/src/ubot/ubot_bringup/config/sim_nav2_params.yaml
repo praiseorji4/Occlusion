@@ -129,7 +129,11 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.15
+      # Inspection Robot 01 body: 357 x 252 mm (incl. wheels), origin centred between the
+      # axles. Rectangular footprint + 15 mm padding; a circle (r 0.219) would refuse
+      # gaps the robot actually fits through.
+      footprint: "[[0.185, 0.131], [0.185, -0.131], [-0.185, -0.131], [-0.185, 0.131]]"
+      footprint_padding: 0.015
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -166,7 +170,11 @@ global_costmap:
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_footprint
-      robot_radius: 0.15
+      # Inspection Robot 01 body: 357 x 252 mm (incl. wheels), origin centred between the
+      # axles. Rectangular footprint + 15 mm padding; a circle (r 0.219) would refuse
+      # gaps the robot actually fits through.
+      footprint: "[[0.185, 0.131], [0.185, -0.131], [-0.185, -0.131], [-0.185, 0.131]]"
+      footprint_padding: 0.015
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]

@@ -6,13 +6,16 @@
     <xacro:arg name="robot_name" default="ubot_robot"/>
     <xacro:arg name="prefix" default=""/>
     <xacro:arg name="use_gazebo" default="false"/>
+    <xacro:arg name="sensor_profile" default="full"/>
 
 
 
     <xacro:include filename="$(find ubot_description)/urdf/body/ubot_base.urdf.xacro"/>
     <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_lidar.urdf.xacro"/>
-    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_ultrasonic.urdf.xacro"/>
+    <!-- Ultrasonics are not part of the Inspection Robot 01 body; re-enable here and below if fitted. -->
+    <!-- <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_ultrasonic.urdf.xacro"/> -->
     <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_camera.urdf.xacro"/>
+    <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_rpi_camera.urdf.xacro"/>
     <xacro:include filename="$(find ubot_description)/urdf/sensors/ubot_imu.urdf.xacro"/>
 
 
@@ -36,10 +39,13 @@
     <xacro:ubot_lidar 
     prefix="$(arg prefix)" />
 
-    <xacro:ubot_ultrasonic 
+    <!-- <xacro:ubot_ultrasonic
+    prefix="$(arg prefix)" /> -->
+
+    <xacro:ubot_camera
     prefix="$(arg prefix)" />
 
-    <xacro:ubot_camera 
+    <xacro:ubot_rpi_camera
     prefix="$(arg prefix)" />
 
     <xacro:ubot_imu 

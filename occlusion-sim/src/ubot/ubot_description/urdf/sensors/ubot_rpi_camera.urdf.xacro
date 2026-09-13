@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    Raspberry Pi Camera v1 in the lower front bumper.
+
+    rpi_camera_link is at the centre of the camera board, X pointing out of the lens,
+    tilted 12.54 deg downward as mounted in CAD.
+  -->
+  <xacro:property name="rpi_camera_mass" value="0.0017" />
+
+  <xacro:property name="rpi_camera_x" value="0.163777" />
+  <xacro:property name="rpi_camera_y" value="0.0" />
+  <xacro:property name="rpi_camera_z" value="0.032609" />
+  <xacro:property name="rpi_camera_pitch" value="0.2188" />   <!-- rad, positive = looking down -->
+
+  <xacro:macro name="ubot_rpi_camera" params="prefix">
+
+    <link name="${prefix}rpi_camera_link">
+      <visual>
+        <!-- inverse of the joint transform, so the world-frame mesh lands in place -->
+        <origin xyz="-0.311305 0 -0.102620" rpy="0 ${-rpi_camera_pitch} 0"/>
+        <geometry>
+          <mesh filename="file://$(find ubot_description)/meshes/inspection/rpi_camera_v1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="pcb_green">
+          <color rgba="0.1 0.4 0.15 1"/>
+        </material>
+      </visual>
+
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${rpi_camera_mass}"/>
+        <!-- 9 x 25 x 24 mm board + lens, box approximation -->
+        <inertia ixx="0.000000093" ixy="0.0" ixz="0.0"
+                 iyy="0.000000093" iyz="0.0"
+                 izz="0.000000170"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}rpi_camera_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}rpi_camera_link"/>
+      <origin xyz="${rpi_camera_x} ${rpi_camera_y} ${rpi_camera_z}" rpy="0 ${rpi_camera_pitch} 0"/>
+    </joint>
+
+    <!-- Optical frame (REP-103): X right, Y down, Z forward -->
+    <link name="${prefix}rpi_camera_optical_frame"/>
+
+    <joint name="${prefix}rpi_camera_optical_joint" type="fixed">
+      <parent link="${prefix}rpi_camera_link"/>
+      <child link="${prefix}rpi_camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+  </xacro:macro>
+</robot>

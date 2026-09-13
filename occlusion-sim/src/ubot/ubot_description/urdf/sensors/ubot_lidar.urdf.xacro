@@ -1,65 +1,64 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:property name="M_PI" value="3.1415926535897931" />
-  <xacro:property name="lidar_mass" value="0.170" />  <!-- RPLIDAR A1/A2 ~170 g -->
-  <xacro:property name="lidar_length" value="0.035" />
-  <xacro:property name="lidar_width" value="0.035" />
-  <xacro:property name="lidar_height" value="0.02580" />
-  <xacro:property name="com_x" value="-0.000082" />     <!--Center of Mass-->
-  <xacro:property name="com_y" value="-0.000041" /> 
-  <xacro:property name="com_z" value="0.010541" /> 
-  <xacro:property name="stand_height" value="${lidar_height}" /> 
+  <!--
+    Orbbec/Oradar MS200 dToF lidar on top of the mast.
 
-  <xacro:property name="lidar_x" value="-0.14250" /> 
-  <xacro:property name="lidar_y" value="0.0" /> 
-  <xacro:property name="lidar_z" value="${base_height + lidar_height/2}" /> 
+    The CAD models an LDROBOT LD06 (the previous sensor); the robot now runs an MS200
+    (real_robot.launch.py: device_model MS200 on /dev/ttyACM0). The two are nearly the
+    same envelope - LD06 38.6 x 38.6 x 34.8 mm, MS200 37.7 x 37.5 x 33.0 mm - so the
+    mount is unchanged and the sensor is drawn as a correctly sized primitive rather
+    than the wrong sensor's mesh.
 
+    lidar_link is placed at the mid-height of the sensor body. TODO: measure the real
+    scan-plane height above the mast and set lidar_scan_z; being a centimetre out in Z
+    tilts nothing but does bias obstacle heights slightly.
+  -->
+  <xacro:property name="lidar_length" value="0.0377" />   <!-- X -->
+  <xacro:property name="lidar_width"  value="0.0375" />   <!-- Y -->
+  <xacro:property name="lidar_height" value="0.0330" />   <!-- Z -->
+  <xacro:property name="lidar_mass"   value="0.0428" />   <!-- approximate, not from datasheet -->
 
-
-
+  <!-- Mount: top face of the mast, from CAD (base_link frame) -->
+  <xacro:property name="lidar_mount_z" value="0.2798" />
+  <xacro:property name="lidar_x" value="0.030584" />
+  <xacro:property name="lidar_y" value="0.0" />
+  <xacro:property name="lidar_scan_z" value="${lidar_mount_z + lidar_height/2}" />
 
   <xacro:macro name="ubot_lidar" params="prefix">
 
     <link name="${prefix}lidar_link">
       <visual>
-        <origin xyz="0 0 ${-lidar_height/4}" rpy="0 0 0"/>
-        <!-- <geometry>
-            <mesh filename="file://$(find ubot_description)/meshes/lidar.stl" scale="0.001 0.001 0.001"/>
-        </geometry> -->
-
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius="${lidar_width/2}" length="${lidar_height/2}"/>
-        </geometry> 
-
-
+          <box size="${lidar_length} ${lidar_width} ${lidar_height}"/>
+        </geometry>
         <material name="black">
-          <color rgba="0 0 0 0.5"/>
+          <color rgba="0.05 0.05 0.05 1"/>
         </material>
       </visual>
 
       <collision>
-        <origin xyz="0 0 ${-lidar_height/4}" rpy="0 0 0"/>
-
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius="${lidar_width/2}" length="${lidar_height/2}"/>
-        </geometry> 
-
+          <box size="${lidar_length} ${lidar_width} ${lidar_height}"/>
+        </geometry>
       </collision>
 
       <inertial>
-          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
-          <mass value="${lidar_mass}"/>
-          <!-- Cylinder inertia: r = lidar_width/2, h = lidar_height -->
-          <inertia ixx="${(1/12) * lidar_mass * (3*(lidar_width/2)*(lidar_width/2) + lidar_height*lidar_height)}"  ixy="0.0"  ixz="0.0"
-                    iyy="${(1/12) * lidar_mass * (3*(lidar_width/2)*(lidar_width/2) + lidar_height*lidar_height)}"  iyz="0.0"
-                    izz="${(1/2) * lidar_mass * (lidar_width/2)*(lidar_width/2)}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${lidar_mass}"/>
+        <inertia ixx="${(1/12) * lidar_mass * (lidar_width*lidar_width + lidar_height*lidar_height)}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(1/12) * lidar_mass * (lidar_length*lidar_length + lidar_height*lidar_height)}"
+                 iyz="0.0"
+                 izz="${(1/12) * lidar_mass * (lidar_length*lidar_length + lidar_width*lidar_width)}"/>
       </inertial>
     </link>
 
     <joint name="${prefix}lidar_joint" type="fixed">
       <parent link="${prefix}base_link"/>
       <child link="${prefix}lidar_link"/>
-      <origin xyz="${lidar_x} ${lidar_y} ${lidar_z}" rpy="0 0 0"/>
+      <origin xyz="${lidar_x} ${lidar_y} ${lidar_scan_z}" rpy="0 0 0"/>
     </joint>
   </xacro:macro>
 </robot>

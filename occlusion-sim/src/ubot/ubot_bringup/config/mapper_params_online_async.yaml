@@ -18,7 +18,10 @@ slam_toolbox:
     mode: mapping #localization
 
     # To resume localization from an existing map, switch mode to 'localization' and set:
-    map_file_name: /home/chibueze/uni-bot/studio_3_serial # (no extension — slam_toolbox appends .posegraph)
+    # Disabled: this path only exists on one laptop, so slam_toolbox logged
+    # 'Failed to open requested file' on every start and mapped from scratch anyway.
+    # Set it to a pose graph that exists locally if you want to continue a saved map.
+    # map_file_name: /home/chibueze/uni-bot/studio_3_serial # (no extension — slam_toolbox appends .posegraph)
     # map_start_pose: [0.0, 0.0, 0.0]
     map_start_at_dock: true
 

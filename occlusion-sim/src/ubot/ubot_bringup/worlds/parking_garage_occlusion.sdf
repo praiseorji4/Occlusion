@@ -1,0 +1,188 @@
+<?xml version="1.0" ?>
+<!--
+  Parking garage occlusion scene.
+
+  Why this world exists: sonoma_occlusion.sdf uses the Sonoma Raceway, whose mesh spans
+  about 47.9 x 41.9 km. The depth camera and lidar re-render that every cycle, so the sim
+  runs near RTF 0.2 on a machine without GPU passthrough (/scan at ~2 Hz instead of 10 Hz)
+  while the robot only ever uses ~30 m of it. This garage is 60 x 39 m with 17k vertices,
+  and gives better occluders for the research: concrete pillars at camera height, parked
+  vehicles, and pedestrians stepping out from behind both.
+
+  Building: "Parking garage" from Gazebo Fuel (OpenRobotics, CC-BY 4.0), vendored into
+  ubot_bringup/models/parking_garage so it runs offline and keeps its textures (the Fuel
+  COLLADA names its .jpg files by bare filename, so the vendored copy duplicates them
+  next to the .dae).
+
+  Ground floor is z = 0. Scene laid out along +X from the robot, positions chosen from a
+  clearance map of the mesh sliced at z = 0.35 (robot height):
+
+      robot        (-16.00, -0.15)  10.0 m clearance, facing +X down the aisle
+      pickup truck  ( -8.00, -3.55)  2.75 m      SUV        (-7.75, +3.25)  2.50 m
+      hatchback     ( -0.50, -2.05)  2.50 m      ambulance  (+0.50, +3.45)  3.50 m
+      visible ped   (-10.00, +0.35)             occluded peds behind pickup and ambulance
+      walking actor crosses at x = -11.0, where the aisle is 5.75 m clear
+
+  Run it with:
+    ros2 launch ubot_bringup sim.launch.py world:=parking_garage_occlusion \
+        world_name:=parking_garage spawn_x:=-16.0 spawn_y:=-0.15 spawn_z:=0.15 spawn_yaw:=0.0
+
+  NOTE: the Sensors system is deliberately NOT declared here - the robot brings its own in
+  ubot_gazebo.urdf.xacro. Declaring it in both places loads it twice and segfaults inside
+  libgz-sim-sensors-system.so a few seconds after the robot spawns.
+-->
+<sdf version='1.8'>
+  <world name='parking_garage'>
+    <physics name='1ms' type='ignored'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>5.5645e-06 2.28758e-05 -4.23884e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+
+    <!-- A garage interior is shaded: the directional light alone leaves it almost black. -->
+    <scene>
+      <ambient>0.6 0.6 0.62 1</ambient>
+      <background>0.5 0.55 0.6 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <light type='directional' name='sun'>
+      <cast_shadows>true</cast_shadows>
+      <pose>-20 0 20 0 0 0</pose>
+      <diffuse>0.9 0.9 0.88 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>0.4 0.2 -0.9</direction>
+    </light>
+
+    <light type='point' name='bay_light_west'>
+      <pose>-14 0 3.2 0 0 0</pose>
+      <diffuse>0.7 0.7 0.68 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>22</range><constant>0.4</constant><linear>0.05</linear><quadratic>0.004</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+    <light type='point' name='bay_light_centre'>
+      <pose>-4 0 3.2 0 0 0</pose>
+      <diffuse>0.7 0.7 0.68 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>22</range><constant>0.4</constant><linear>0.05</linear><quadratic>0.004</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+    <light type='point' name='bay_light_east'>
+      <pose>6 0 3.2 0 0 0</pose>
+      <diffuse>0.7 0.7 0.68 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>22</range><constant>0.4</constant><linear>0.05</linear><quadratic>0.004</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+
+    <!-- Floor collision, 2 cm below the garage deck to avoid z-fighting with its own floor. -->
+    <model name='ground_plane'>
+      <static>true</static>
+      <pose>0 0 -0.02 0 0 0</pose>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>0.8</mu2></ode></friction></surface>
+        </collision>
+        <visual name='visual'>
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <material>
+            <ambient>0.28 0.28 0.3 1</ambient>
+            <diffuse>0.32 0.32 0.34 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <include>
+      <uri>model://parking_garage</uri>
+      <name>parking_garage</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- ── Parked vehicles: the occluders ───────────────────────────────── -->
+    <include>
+      <name>pickup_truck</name>
+      <pose>-8.0 -3.55 0.05 0 0 0.0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pickup</uri>
+    </include>
+
+    <include>
+      <name>SUV</name>
+      <pose>-7.75 3.25 0.05 0 0 3.14159</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/SUV</uri>
+    </include>
+
+    <include>
+      <name>Hatchback</name>
+      <pose>-0.5 -2.05 0.05 0 0 0.0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRoboticsTest/models/Hatchback copy</uri>
+    </include>
+
+    <include>
+      <name>Ambulance</name>
+      <pose>0.5 3.45 0.05 0 0 3.14159</pose>
+      <uri>https://fuel.gazebosim.org/1.0/chapulina/models/Ambulance</uri>
+    </include>
+
+    <!-- ── Pedestrians ──────────────────────────────────────────────────────
+         Origins differ between models: Nurse and "Standing person" sit on their feet
+         (z = 0), while "Casual female" is centred at waist height (its mesh bottom is
+         -1.0 m), so that one needs z = 1.0 or it sinks through the floor. -->
+    <include>
+      <name>visible_pedestrian</name>
+      <pose>-10.0 0.35 0.0 0 0 -1.57</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Nurse</uri>
+    </include>
+
+    <!-- "Male visitor" is an ACTOR, not a model: <include> silently drops it and the
+         pedestrian never appears. "Standing person" is a real model (origin at the feet). -->
+    <include>
+      <name>heavily_occluded_pedestrian</name>
+      <pose>-6.2 -3.45 0.0 0 0 1.2</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standing person</uri>
+    </include>
+
+    <include>
+      <name>partly_occluded_pedestrian</name>
+      <pose>2.0 3.35 1.0 0 0 -2.0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Casual female</uri>
+    </include>
+
+    <!-- ── Walking actor crossing the aisle at x = -11 ─────────────────────
+         Walks across the robot's line of sight, passing behind the pickup truck. -->
+    <actor name="crossing_pedestrian">
+      <skin>
+        <filename>https://fuel.gazebosim.org/1.0/chapulina/models/Walking actor/tip/files/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>https://fuel.gazebosim.org/1.0/chapulina/models/Walking actor/tip/files/meshes/walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0.0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.0</time><pose>-11.0 -3.65 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>7.0</time><pose>-11.0 3.35 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>8.0</time><pose>-11.0 3.35 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>15.0</time><pose>-11.0 -3.65 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>16.0</time><pose>-11.0 -3.65 1.0 0 0 1.5708</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+  </world>
+</sdf>

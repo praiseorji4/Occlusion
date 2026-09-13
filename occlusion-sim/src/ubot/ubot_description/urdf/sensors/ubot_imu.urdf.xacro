@@ -5,14 +5,16 @@
   <xacro:property name="imu_length" value="0.0259" />
   <xacro:property name="imu_width" value="0.0155" />
   <xacro:property name="imu_height" value="0.015" />
-  <xacro:property name="com_x" value="-0.000082" />     <!--Center of Mass-->
-  <xacro:property name="com_y" value="-0.000041" /> 
-  <xacro:property name="com_z" value="0.010541" /> 
-  <xacro:property name="stand_height" value="${imu_height}" /> 
+  <xacro:property name="imu_com_x" value="-0.000082" />     <!--Center of Mass-->
+  <xacro:property name="imu_com_y" value="-0.000041" />
+  <xacro:property name="imu_com_z" value="0.010541" />
 
-  <xacro:property name="imu_x" value="${-(base_length/2 - 0.115)}" /> 
-  <xacro:property name="imu_y" value="${-(0.165 - base_width/2)}" /> 
-  <xacro:property name="imu_z" value="0.18" /> 
+  <!-- TODO: measure on the Inspection Robot body. These are the values from the old
+       box model (-(0.41/2 - 0.115), -(0.165 - 0.2371/2), 0.18), kept so the IMU frame
+       does not move; z = 0.18 is above the new chassis roof at this x. -->
+  <xacro:property name="imu_x" value="-0.09" />
+  <xacro:property name="imu_y" value="-0.04645" />
+  <xacro:property name="imu_z" value="0.18" />
 
 
 
@@ -39,7 +41,7 @@
       </visual>
 
       <inertial>
-          <origin xyz="${com_x} ${com_y} ${com_z}" rpy="0 0 0"/>
+          <origin xyz="${imu_com_x} ${imu_com_y} ${imu_com_z}" rpy="0 0 0"/>
           <mass value="${imu_mass}"/>
           <inertia ixx="${(1/12) * imu_mass * ((imu_width * imu_width) + (imu_height * imu_height))}"  ixy="0.0"  ixz="0.0"  
                     iyy="${(1/12) * imu_mass * ((imu_length * imu_length) + (imu_height * imu_height))}"  iyz="0.0" 
