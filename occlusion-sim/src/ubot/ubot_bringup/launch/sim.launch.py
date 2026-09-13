@@ -69,6 +69,12 @@ def generate_launch_description():
         # headless:=true runs the Gazebo server only (no GUI window). Sensors still work.
         # Much lighter, and the only way to run on a machine without a display.
         DeclareLaunchArgument('headless', default_value='false'),
+        # start_gazebo:=false attaches to a Gazebo that is ALREADY running, e.g. one you
+        # started by hand with:  gz sim -r sonoma_occlusion.sdf
+        # Leaving this true while a server is already up starts a SECOND server: both
+        # advertise the same world name, the robot is spawned into one of them while you
+        # watch the other, and it looks like the spawn silently failed.
+        DeclareLaunchArgument('start_gazebo', default_value='true'),
     ]
 
     #    Gazebo finds model://apartment through GZ_SIM_RESOURCE_PATH, which must point at
@@ -89,6 +95,7 @@ def generate_launch_description():
             TextSubstitution(text='-r -v 4 '),
             PythonExpression(["'-s ' if '", LaunchConfiguration('headless'), "'.lower() in ('true','1') else ''"]),
             world_file]}.items(),
+        condition=IfCondition(LaunchConfiguration('start_gazebo'))
     )
 
 
