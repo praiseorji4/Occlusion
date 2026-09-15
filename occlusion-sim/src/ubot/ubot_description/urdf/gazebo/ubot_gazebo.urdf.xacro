@@ -193,6 +193,53 @@
         </gazebo>
 
         <!--
+          CONTACT SENSOR - the collision metric for the navigation trials.
+
+          Mounted on base_link only, deliberately. The wheels are the only part
+          of the robot that touches the floor in normal driving, so leaving them
+          unsensed means every reported contact is already a real collision and
+          there is no ground-contact filter to get subtly wrong. The chassis
+          cannot reach the floor without the suspension bottoming out: the
+          underside collision box stops at z = -0.048 while the floor sits at
+          z = -0.066 under base_link, an 18 mm clearance.
+
+          The <collision> names look wrong and are not. base_link is joined to
+          base_footprint by a fixed joint, and urdf -> sdf conversion LUMPS the
+          two links together, renaming every collision to
+          <joint>_lump__<original>. So the names below are what the converter
+          actually emits, not what this file declares. Verify after any change
+          with:
+
+            gz sdf -p robot.urdf | grep "collision name="
+
+          Getting this wrong is silent: the sensor loads, matches nothing, and
+          reports zero collisions forever - which reads exactly like a robot
+          that never crashes. The suffixes follow declaration order in
+          ubot_base.urdf.xacro: hull, mast, underside.
+
+          Not gated on sensor_profile: the profile exists to cap *rendering*
+          cost, and contact detection is done by the physics engine. Turning it
+          off with 'fast' would mean the cheap profile silently reports zero
+          collisions - a far worse failure than a slow one.
+        -->
+        <gazebo reference="${prefix}base_link">
+            <sensor name="${prefix}base_contact_sensor" type="contact">
+                <!-- No <topic> here on purpose: the Contact system ignores it and
+                     publishes on the scoped world/model/link/sensor name. Declaring
+                     one implies a control that does not exist. sim.launch.py bridges
+                     the real name and remaps it to /bumper/contacts. -->
+                <update_rate>50</update_rate>
+                <always_on>1</always_on>
+                <visualize>false</visualize>
+                <contact>
+                    <collision>${prefix}base_footprint_fixed_joint_lump__base_link_collision</collision>
+                    <collision>${prefix}base_footprint_fixed_joint_lump__base_link_collision_1</collision>
+                    <collision>${prefix}base_footprint_fixed_joint_lump__base_link_collision_2</collision>
+                </contact>
+            </sensor>
+        </gazebo>
+
+        <!--
           Skid-steer friction.
 
           mu1 acts along fdir1 (the rolling direction, +X) and mu2 across it (sideways).

@@ -16,6 +16,8 @@
          the world itself gains sensors AND the robot's copy is removed. -->
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <!-- Contact sensing. Without this system the robot's contact sensor is inert and collisions are undetectable, which is the central safety metric for the navigation trials. -->
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
 
     <include>
       <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Sonoma Raceway</uri>

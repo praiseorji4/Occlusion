@@ -128,9 +128,30 @@ def generate_launch_description():
             '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
 
             # IMU BRIDGE
-            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU'
+            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+
+            # CONTACT BRIDGE - the collision metric for the navigation trials.
+            #
+            # The Contact system IGNORES the <topic> set on the sensor and always
+            # publishes on the fully scoped name below, which carries the world
+            # name - hence the substitution. Bridging a short name instead gives
+            # a ROS topic that exists, is subscribed, and never receives a
+            # message: a silent zero-collision result. Remapped to
+            # /bumper/contacts for everything downstream.
+            PathJoinSubstitution([
+                TextSubstitution(text='/world'), world_name,
+                TextSubstitution(
+                    text='model/ubot/link/base_footprint/sensor/'
+                         'base_contact_sensor/contact'
+                         '@ros_gz_interfaces/msg/Contacts[gz.msgs.Contacts'),
+            ]),
         ],
         remappings=[
+            (PathJoinSubstitution([
+                TextSubstitution(text='/world'), world_name,
+                TextSubstitution(text='model/ubot/link/base_footprint/sensor/'
+                                      'base_contact_sensor/contact')]),
+             '/bumper/contacts'),
             ('/camera/image', '/camera/rgb/image_raw'),
             ('/camera/depth_image', '/camera/depth/image_raw'),
             ('/camera/camera_info', '/camera/rgb/camera_info'),

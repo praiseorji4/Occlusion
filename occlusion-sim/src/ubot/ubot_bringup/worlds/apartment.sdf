@@ -27,6 +27,8 @@
     <plugin name='gz::sim::systems::ForceTorque' filename='gz-sim-forcetorque-system'/>
     <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
     <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
+    <!-- Contact sensing. Without this system the robot's contact sensor is inert and collisions are undetectable, which is the central safety metric for the navigation trials. -->
+    <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system'/>
 
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>5.5645e-06 2.28758e-05 -4.23884e-05</magnetic_field>
