@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<robot name="Inspection_Robot_Fixed" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<transmission name="wheel_fl_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="wheel_fl_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="wheel_fl_joint_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="wheel_fr_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="wheel_fr_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="wheel_fr_joint_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="wheel_rl_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="wheel_rl_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="wheel_rl_joint_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="wheel_rr_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="wheel_rr_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="wheel_rr_joint_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+</robot>

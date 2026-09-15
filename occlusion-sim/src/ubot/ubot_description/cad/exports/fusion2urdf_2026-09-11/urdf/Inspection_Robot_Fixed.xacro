@@ -1,0 +1,221 @@
+<?xml version="1.0" ?>
+<robot name="Inspection_Robot_Fixed" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find Inspection_Robot_Fixed_description)/urdf/materials.xacro" />
+<xacro:include filename="$(find Inspection_Robot_Fixed_description)/urdf/Inspection_Robot_Fixed.trans" />
+<xacro:include filename="$(find Inspection_Robot_Fixed_description)/urdf/Inspection_Robot_Fixed.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.1563884906947103 0.003311209179728434 0.07080042252249487" rpy="0 0 0"/>
+    <mass value="1.7576042636532123"/>
+    <inertia ixx="0.019834" iyy="0.034307" izz="0.033227" ixy="-3e-06" iyz="5e-06" ixz="-0.001273"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="wheel_fl_1">
+  <inertial>
+    <origin xyz="4.453496801337664e-07 0.00014644051784350187 4.5456981508790184e-07" rpy="0 0 0"/>
+    <mass value="0.04421519218240296"/>
+    <inertia ixx="1.8e-05" iyy="3.2e-05" izz="1.8e-05" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.273517 -0.116563 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_fl_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.273517 -0.116563 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_fl_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="wheel_fr_1">
+  <inertial>
+    <origin xyz="4.4533832804782847e-07 -0.00014608867356857846 4.545698151156574e-07" rpy="0 0 0"/>
+    <mass value="0.04421519218240299"/>
+    <inertia ixx="1.8e-05" iyy="3.2e-05" izz="1.8e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.273517 0.109837 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_fr_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.273517 0.109837 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_fr_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="wheel_rl_1">
+  <inertial>
+    <origin xyz="3.9851034165303e-07 0.00014644051784347412 4.5456981510177963e-07" rpy="0 0 0"/>
+    <mass value="0.04421519218240288"/>
+    <inertia ixx="1.8e-05" iyy="3.2e-05" izz="1.8e-05" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.018517 -0.116563 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_rl_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.018517 -0.116563 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_rl_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="wheel_rr_1">
+  <inertial>
+    <origin xyz="3.984989895393365e-07 -0.00014608867356848132 4.5456981508096295e-07" rpy="0 0 0"/>
+    <mass value="0.044215192182402926"/>
+    <inertia ixx="1.8e-05" iyy="3.2e-05" izz="1.8e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.018517 0.109837 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_rr_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.018517 0.109837 0.014154" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/wheel_rr_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="lidar_link_1">
+  <inertial>
+    <origin xyz="-9.545248841275056e-05 1.115679684367309e-05 -0.0013801977522382436" rpy="0 0 0"/>
+    <mass value="0.04280094644898329"/>
+    <inertia ixx="8e-06" iyy="8e-06" izz="9e-06" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.176601 -0.003363 -0.316155" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/lidar_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.176601 -0.003363 -0.316155" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/lidar_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="camera_link_1">
+  <inertial>
+    <origin xyz="3.142389959909231e-07 -1.4293935946202777e-07 -2.2840959443271025e-08" rpy="0 0 0"/>
+    <mass value="0.0016988440149389276"/>
+    <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="-0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.309794 -0.003361 -0.05233" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/camera_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.309794 -0.003361 -0.05233" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/camera_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="oakd_link_1">
+  <inertial>
+    <origin xyz="-0.008691107771481466 1.759221374755815e-07 0.0006204597692677366" rpy="0 0 0"/>
+    <mass value="0.06100000000002243"/>
+    <inertia ixx="4.6e-05" iyy="6e-06" izz="4.4e-05" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.313786 -0.003363 -0.105375" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/oakd_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.313786 -0.003363 -0.105375" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://Inspection_Robot_Fixed_description/meshes/oakd_link_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="wheel_fl_joint" type="continuous">
+  <origin xyz="0.273517 0.116563 -0.014154" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="wheel_fl_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="wheel_fr_joint" type="continuous">
+  <origin xyz="0.273517 -0.109837 -0.014154" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="wheel_fr_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="wheel_rl_joint" type="continuous">
+  <origin xyz="0.018517 0.116563 -0.014154" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="wheel_rl_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="wheel_rr_joint" type="continuous">
+  <origin xyz="0.018517 -0.109837 -0.014154" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="wheel_rr_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="lidar_joint" type="fixed">
+  <origin xyz="0.176601 0.003363 0.316155" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="lidar_link_1"/>
+</joint>
+
+<joint name="camera_joint" type="fixed">
+  <origin xyz="0.309794 0.003361 0.05233" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="camera_link_1"/>
+</joint>
+
+<joint name="oakd_joint" type="fixed">
+  <origin xyz="0.313786 0.003363 0.105375" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="oakd_link_1"/>
+</joint>
+
+</robot>

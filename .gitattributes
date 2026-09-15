@@ -1,0 +1,14 @@
+# Binary assets: never touch line endings, never try to diff them.
+# Without this, git on Windows (core.autocrlf) will happily rewrite bytes inside a
+# CAD archive or a PDF and hand you a corrupt file on the next checkout.
+*.f3z  binary
+*.f3d  binary
+*.pdf  binary
+*.stl  binary
+*.dae  binary
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.pgm  binary
+*.posegraph binary
+*.data binary
