@@ -19,16 +19,20 @@ diff_drive_controller:
     left_wheel_names: ["front_left_wheel_joint"]
     right_wheel_names: ["front_right_wheel_joint"]
 
-    # NOT the geometric track (0.2264 m). A 4-wheel skid-steer must scrub its tyres to
-    # turn, so it rotates slower than the geometry predicts and the odometry needs the
-    # EFFECTIVE separation. Deliberately the same value as the real robot
-    # (ubot_controllers.yaml / diff_controller.h): the sim's lateral wheel friction
-    # (mu2 = 0.12 in ubot_gazebo.urdf.xacro) was tuned so this value is correct in sim too.
-    # Verified against Gazebo ground truth: actual/commanded yaw rate = 1.001.
-    # If the real robot is recalibrated to a different value, retune mu2 rather than
-    # letting sim and real drift apart (higher mu2 = less scrub = larger effective
-    # separation; mu2 = 1.1 locks the wheels entirely).
-    wheel_separation: 0.264204
+    # MEASURED IN THIS SIM, not copied from the robot. Commanding 0.6 rad/s and timing
+    # the yaw against Gazebo ground truth gives an effective separation of 0.2504 m
+    # (ratio 1.00), i.e. the sim turns almost exactly as the geometry predicts.
+    #
+    # The REAL robot needs 0.55 - it scrubs more than twice as hard - and the sim cannot
+    # reproduce that. A friction sweep found no middle ground: mu2 0.50 and 0.90 both give
+    # S_eff 0.250, and by 1.05 the wheels lock completely and the robot will not turn at
+    # all. The real limit is TORQUE (the motors stall in a spin), which a velocity-commanded
+    # joint in gz_ros2_control does not have. Reproducing it properly means modelling the
+    # motor's effort limit, not raising friction.
+    #
+    # So: this value keeps sim ODOMETRY honest about sim PHYSICS, and the angular cap below
+    # keeps anything tuned here executable on the robot. Do not "sync" it to 0.55.
+    wheel_separation: 0.2504
     wheel_radius: 0.0325   # wheel_radius (Inspection Robot 01 CAD)
 
     # Odometry settings
@@ -52,8 +56,11 @@ diff_drive_controller:
     angular:
       z:
         has_velocity_limits: true
-        max_velocity: 2.0
-        min_velocity: -2.0
+        # The robot saturates at ~0.3 rad/s in a spin (tyre scrub + motor torque), so
+        # anything faster is only achievable in simulation. Capped here so behaviour
+        # developed in sim can actually be executed on the hardware.
+        max_velocity: 0.3
+        min_velocity: -0.3
 
 joint_state_broadcaster:
   ros__parameters:

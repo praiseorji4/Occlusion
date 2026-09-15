@@ -36,8 +36,13 @@
           <param name="enc_counts_per_rev_right">3956</param>
 
           <!-- Geometry — must match diff_controller.h on the ESP32 -->
-          <param name="wheel_separation">0.264204</param>
-          <param name="wheel_radius">0.033</param>
+          <!-- Calibrated on the robot (spin test: odom 180.3 deg vs ~92 deg measured).
+               UbotHardware parses these and never uses them - the command path is
+               per-wheel ticks-per-frame from enc_counts_per_rev and loop_rate - but they
+               must still match ubot_controllers.yaml and the ESP32 diff_controller.h,
+               or the next person inherits a wrong number that looks authoritative. -->
+          <param name="wheel_separation">0.55</param>
+          <param name="wheel_radius">0.032340</param>
 
           <!-- Serial port to ESP32 (check: ls /dev/ttyUSB*) -->
           <param name="serial_device">/dev/ttyUSB0</param>
