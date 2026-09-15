@@ -54,21 +54,50 @@ diff_drive_controller:
     # Keep in sync with:
     #   - diff_controller.h  (WHEEL_RADIUS_M, WHEEL_SEPARATION_M)
     #   - ubot_ros2_control.xacro  (wheel_radius, wheel_separation)
-    wheel_separation:  0.264204
-    wheel_radius:      0.033
+    # CALIBRATED ON THE ROBOT. History, because the numbers look implausible otherwise:
+    #
+    # wheel_radius 0.032340 - straight-line test 2026-09-12: odometry read 1.000 m where
+    #   the tape said 0.980, so 0.033 * 0.98. CAD says 0.0325, agreeing to 0.5%.
+    #
+    # wheel_separation 0.55 - this is 2.4x the CAD track (0.2264 m). That factor is real:
+    #   a nearly square 4-wheel skid-steer must scrub its tyres sideways to rotate, so it
+    #   turns far slower than the wheel speeds imply. The spin test measured odometry
+    #   180.3 deg against ~92 deg on the floor, which puts the effective value near 0.52;
+    #   0.55 is what was then run and confirmed on the robot.
+    #
+    #   An earlier attempt produced 0.805. That one is INVALID: it was measured with the
+    #   left wheel stalled, so the robot pivoted about that wheel while the odometry
+    #   integrated only the right one. Do not restore it.
+    #
+    # The ESP32 firmware (diff_controller.h) now carries 0.55 too. It only affects the
+    # diagnostic angVel field there - the firmware PIDs each wheel independently and never
+    # uses the separation - so the 0.805 that sat in the firmware during calibration could
+    # not have skewed these numbers. Anything read off /diag/vel/angular during those runs
+    # was under-reported by 0.55/0.805 though.
+    #
+    # ubot_ros2_control.xacro carries the same pair for consistency; UbotHardware parses
+    # them and never uses them (commands are per-wheel ticks from enc_counts_per_rev).
+    wheel_separation:  0.55
+    wheel_radius:      0.032340
 
     # ── Velocity command limits ──────────────────────────────────
     # Prevents the controller from sending commands the motors cannot follow,
     # which would cause encoder slip and odometry error.
     # Tune these to your robot's actual measured max values.
-    linear.x.max_velocity:          0.5    # m/s  — lower = more conservative
-    linear.x.min_velocity:         -0.5
+    linear.x.max_velocity:          0.25    # m/s  — lower = more conservative
+    linear.x.min_velocity:         -0.25
     linear.x.max_acceleration:      1.0    # m/s²
     linear.x.min_acceleration:     -1.0
-    angular.z.max_velocity:          2.0   # rad/s
-    angular.z.min_velocity:         -2.0
-    angular.z.max_acceleration:      2.0
-    angular.z.min_acceleration:     -2.0
+    # Measured 2026-09-12: spinning in place is torque-limited. At full PWM the
+    # wheels manage only ~16-26 rpm during a spin (vs ~72 rpm free), i.e. roughly
+    # 0.25-0.3 rad/s of body rotation. Commanding more than the robot can deliver
+    # saturates the motors, stalls a wheel, and corrupts odometry and SLAM.
+    # Verified at 0.3 rad/s: 0% PWM saturation, both wheels tracking within 0.6%.
+    # 0.4 is untested; raise only if wheel_diag.py spin --speed 0.4 also shows ~0%.
+    angular.z.max_velocity:          0.3   # rad/s
+    angular.z.min_velocity:         -0.3
+    angular.z.max_acceleration:      0.8
+    angular.z.min_acceleration:     -0.8
 
     # ── Odometry ─────────────────────────────────────────────────
     odom_frame_id:  odom

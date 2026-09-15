@@ -1,0 +1,32 @@
+# Horizon / Inspection Robot 01 - stable names for the serial devices.
+#
+# /dev/ttyUSB* and /dev/ttyACM* are handed out in enumeration order, so they move
+# around when devices are replugged or powered up in a different order. These rules
+# add fixed symlinks that follow the device itself:
+#
+#   /dev/esp32  -> the ESP32 motor bridge   (CH340,  1a86:7523)
+#   /dev/lidar  -> the Orbbec MS200 lidar   (CH9102, 1a86:55d4, serial 5890010080)
+#
+# The kernel names still exist and still move; the symlinks do not.
+#
+# Install:
+#   sudo cp ~/99-horizon-serial.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+#   (then unplug/replug both devices, or reboot)
+#
+# Verify:
+#   ls -l /dev/esp32 /dev/lidar
+
+# ── ESP32 motor bridge ────────────────────────────────────────────────
+# CH340 serial chips carry no unique serial number, so this matches the chip type.
+# It is unambiguous as long as this is the only CH340 on the robot. If you ever add
+# a second one, pin it to a physical USB socket instead by uncommenting the
+# KERNELS line below (find the value with:  udevadm info -a -n /dev/ttyUSB0 | grep KERNELS)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="esp32", GROUP="dialout", MODE="0660"
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", KERNELS=="2-2:1.0", SYMLINK+="esp32", GROUP="dialout", MODE="0660"
+
+# ── Orbbec / Oradar MS200 lidar ───────────────────────────────────────
+# This one has a real serial number, so it is pinned to this exact unit.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", ATTRS{serial}=="5890010080", SYMLINK+="lidar", GROUP="dialout", MODE="0660"
+# Fallback if that lidar is ever swapped for another MS200 (matches any):
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", SYMLINK+="lidar", GROUP="dialout", MODE="0660"
