@@ -7,6 +7,10 @@
     <xacro:arg name="prefix" default=""/>
     <xacro:arg name="use_gazebo" default="false"/>
     <xacro:arg name="sensor_profile" default="full"/>
+    <!-- Camera tilt CORRECTION in radians, POSITIVE = looking UP, on top of the 4.09 deg
+         downward tilt the CamCase gives the OAK-D in CAD (confirmed against the robot:
+         lens centre 0.152 m off the floor). 0 unless the mount is physically bent. -->
+    <xacro:arg name="camera_pitch" default="0"/>
 
 
 
@@ -43,7 +47,8 @@
     prefix="$(arg prefix)" /> -->
 
     <xacro:ubot_camera
-    prefix="$(arg prefix)" />
+    prefix="$(arg prefix)"
+    pitch="$(arg camera_pitch)" />
 
     <xacro:ubot_rpi_camera
     prefix="$(arg prefix)" />

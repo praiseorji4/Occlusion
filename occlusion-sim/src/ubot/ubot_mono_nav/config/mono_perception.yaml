@@ -1,0 +1,65 @@
+# Camera perception for the LiDAR-less ubot.
+#
+# The chain:  RGB image -> mono_depth_node -> depth image -> depth_to_scan
+#             -> /scan_mono -> nav2 costmaps
+#
+# depth_scale_json is the contract with the research pipeline. Produce it with:
+#   python occlusion/eval/depth_affine.py --run <clip> \
+#       --depth-model depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf
+# Without it the depth is in the model's own units, which at this viewpoint are
+# wrong by roughly a factor of two -- fine for a first look in rviz, not for
+# driving. The node says so loudly on startup.
+
+mono_depth_node:
+  ros__parameters:
+    use_sim_time: False
+    # Indoor, not outdoor: the outdoor head stops resolving depth past ~4 m from
+    # a camera 0.19 m off the ground. See depth_backend.py for the measurements.
+    model_id: "depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf"
+    input_size: 0            # 0 = the model's native resolution
+    device: ""               # "" = cuda when present, else cpu
+    depth_scale_json: ""     # set this before driving
+    max_rate_hz: 5.0         # inference is the bottleneck; stale frames are worse
+    override_frame_id: ""    # set if the driver stamps a non-optical frame
+
+depth_to_scan:
+  ros__parameters:
+    use_sim_time: False
+    base_frame: "base_footprint"
+    # Height band. Below 0.05 m is the floor the camera mostly looks at, and
+    # marking it would make the robot brake at the ground. Above 0.60 m the
+    # robot passes underneath.
+    height_min: 0.05
+    height_max: 0.60
+    # Trust the camera to 4 m only. Beyond, the scan reads +inf = unknown, so
+    # nav2 neither marks it blocked nor clears it as free.
+    trusted_range: 4.0
+    min_depth: 0.3
+    angle_min_deg: -32.5     # the OAK-D Lite's measured 65 deg horizontal FOV
+    angle_max_deg: 32.5
+    angle_increment_deg: 1.0
+    range_min: 0.15
+    stride: 2                # every 2nd pixel; plenty, and 4x faster
+    min_points: 2            # a lone hot pixel must not stop the robot
+    use_tf: true
+    # Used ONLY if TF has no camera transform; normally the URDF wins (use_tf).
+    # Mirrors the OAK-D in the URDF, confirmed against the robot: lens centre
+    # 0.152 m above the floor, 0.168 m forward of base_footprint, tilted 4.09 deg
+    # DOWN (hence a NEGATIVE pitch_up). Keep these in step with ubot_camera.urdf.xacro.
+    fallback_pitch_up_deg: -4.09
+    fallback_xyz: [0.168, 0.0, 0.152]
+
+scan_watchdog:
+  ros__parameters:
+    use_sim_time: False
+    stale_after: 0.5         # camera depth arrives at ~5 Hz; 0.5 s = 2-3 missed
+    publish_rate: 20.0
+
+oak_rgb_node:
+  ros__parameters:
+    width: 640
+    height: 360
+    fps: 10.0
+    compressed: true         # ~0.5 MB/s; raw at this size would drop frames
+    jpeg_quality: 80
+    frame_id: "camera_rgb_frame"

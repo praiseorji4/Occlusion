@@ -101,7 +101,11 @@
                     </depth_camera>
                 </camera>
 
-                <gz_frame_id>${prefix}camera_depth_frame</gz_frame_id>
+                <!-- Optical frame, not camera_depth_frame: Gazebo publishes images and
+                     clouds in the optical convention (Z forward), while camera_depth_frame
+                     is body-aligned. Stamping the body frame rotates every projected
+                     point by 90 degrees, which silently breaks depth_to_scan. -->
+                <gz_frame_id>${prefix}camera_optical_frame</gz_frame_id>
             </sensor>
         </gazebo>
 

@@ -4,8 +4,15 @@
     Luxonis OAK-D Lite depth camera in the front CamCase.
 
     camera_link sits at the centre of the RGB lens on the front face, X pointing out of
-    the lens. The CamCase tilts the camera 4.09 deg downward (camera_pitch).
-    Mesh: simplified 91 x 28 x 17.5 mm body with the three lenses, in Fusion world coords.
+    the lens. Mesh: simplified 91 x 28 x 17.5 mm body with the three lenses, exported in
+    Fusion world coordinates.
+
+    TILT. The CamCase pocket tilts the camera 4.09 deg (0.0714 rad) DOWN in CAD. The
+    `pitch` argument adds a correction measured on the real robot, POSITIVE = looking UP
+    (calibrate_pose.py measures it against the ground plane), so the net tilt is
+    cad_tilt - pitch and pitch=0 reproduces the CAD geometry exactly. Getting this wrong
+    puts every camera-derived obstacle at the wrong height, which is why depth_to_scan
+    reads the transform from TF rather than assuming it.
   -->
   <xacro:property name="camera_mass" value="0.061" />    <!-- OAK-D Lite datasheet -->
   <xacro:property name="camera_width" value="0.091" />
@@ -15,15 +22,24 @@
   <xacro:property name="camera_x" value="0.167769" />
   <xacro:property name="camera_y" value="0.0" />
   <xacro:property name="camera_z" value="0.085654" />
-  <xacro:property name="camera_pitch" value="0.0714" />   <!-- rad, positive = looking down -->
+  <xacro:property name="camera_cad_tilt" value="0.0714" />   <!-- rad, positive = looking down -->
 
-  <xacro:macro name="ubot_camera" params="prefix">
+  <!-- Mesh position in the exported (Fusion world) frame; the visual origin below is the
+       inverse of the joint transform, computed symbolically because the tilt is variable. -->
+  <xacro:property name="camera_mesh_x" value="0.330149" />
+  <xacro:property name="camera_mesh_z" value="0.085654" />
+
+  <xacro:macro name="ubot_camera" params="prefix pitch:=0">
+
+    <!-- net tilt, positive = down -->
+    <xacro:property name="tilt" value="${camera_cad_tilt - pitch}" />
 
     <!--CAMERA_LINK (OAK-D Lite body)-->
     <link name="${prefix}camera_link">
       <visual>
         <!-- inverse of the joint transform, so the world-frame mesh lands in place -->
-        <origin xyz="-0.323197 0 -0.108988" rpy="0 ${-camera_pitch} 0"/>
+        <origin xyz="${-camera_mesh_x*cos(tilt) + camera_mesh_z*sin(tilt)} 0 ${-camera_mesh_x*sin(tilt) - camera_mesh_z*cos(tilt)}"
+                rpy="0 ${-tilt} 0"/>
         <geometry>
           <mesh filename="file://$(find ubot_description)/meshes/inspection/oakd_lite.stl" scale="0.001 0.001 0.001"/>
         </geometry>
@@ -48,37 +64,49 @@
     <joint name="${prefix}camera_joint" type="fixed">
       <parent link="${prefix}base_link"/>
       <child link="${prefix}camera_link"/>
-      <origin xyz="${camera_x} ${camera_y} ${camera_z}" rpy="0 ${camera_pitch} 0"/>
+      <origin xyz="${camera_x} ${camera_y} ${camera_z}" rpy="0 ${tilt} 0"/>
     </joint>
 
-    <!-- CAMERA_DEPTH_FRAME (Optical frame for depth)
-         This follows ROS REP-103 conventions X is right, Y is down, Z is forward -->
+    <!-- WHICH FRAME IS WHICH, because getting this wrong rotates every
+         camera-derived obstacle by 90 degrees and still looks plausible:
+
+           camera_link           body frame:    X FORWARD, Y left, Z up
+           camera_depth_frame    body-aligned, identical to camera_link
+           camera_rgb_frame      OPTICAL:       X right, Y down, Z FORWARD
+           camera_optical_frame  OPTICAL, same as camera_rgb_frame
+
+         Images and point clouds use the OPTICAL convention, so anything that
+         projects pixels into 3D must be stamped camera_rgb_frame or
+         camera_optical_frame, never camera_depth_frame. -->
+
+    <!-- CAMERA_DEPTH_FRAME: kept for compatibility. NOT an optical frame
+         despite its old comment: it is aligned with camera_link. -->
     <link name="${prefix}camera_depth_frame"/>
 
     <joint name="${prefix}camera_depth_joint" type="fixed">
       <parent link="${prefix}camera_link"/>
       <child link="${prefix}camera_depth_frame"/>
-      <!-- Rotate to optical frame X right, Y down, Z forward -->
       <origin xyz="0 0 0" rpy="0 0 0"/>
     </joint>
 
-    <!-- CAMERA_RGB_FRAME (Optical frame for RGB) Typically aligned with depth frame-->
+    <!-- CAMERA_RGB_FRAME: the optical frame. X right, Y down, Z forward. -->
     <link name="${prefix}camera_rgb_frame"/>
 
     <joint name="${prefix}camera_rgb_joint" type="fixed">
       <parent link="${prefix}camera_link"/>
       <child link="${prefix}camera_rgb_frame"/>
-      <!-- Same orientation as depth frame -->
       <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
     </joint>
 
-    <!-- CAMERA_OPTICAL_FRAME (Alias for compatibility) -->
+    <!-- CAMERA_OPTICAL_FRAME: what Gazebo stamps its images and clouds with.
+         Was parented to camera_depth_frame with no rotation, which made it
+         body-aligned and its name a lie; it is now a real optical frame. -->
     <link name="${prefix}camera_optical_frame"/>
 
     <joint name="${prefix}camera_optical_joint" type="fixed">
-      <parent link="${prefix}camera_depth_frame"/>
+      <parent link="${prefix}camera_link"/>
       <child link="${prefix}camera_optical_frame"/>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
     </joint>
 
   </xacro:macro>
