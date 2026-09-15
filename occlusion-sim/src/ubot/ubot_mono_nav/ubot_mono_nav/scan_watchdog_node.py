@@ -18,6 +18,7 @@ publishing zeros even if the nav2 stack is the thing that died.
 from __future__ import annotations
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -78,7 +79,9 @@ def main() -> None:
     node = ScanWatchdog()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Ctrl-C and `ros2 launch` shutdown are normal exits, not faults. Without
+        # catching the second one, every stop dumps a traceback into the robot log.
         pass
     finally:
         node.destroy_node()
