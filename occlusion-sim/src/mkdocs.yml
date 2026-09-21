@@ -101,6 +101,7 @@ nav:
       - mapper_params_online_async.yaml: configuration/mapper_params_online_async.md
   - Guides:
       - Getting Started: guides/getting_started.md
+      - New System Setup: guides/new_system_setup.md
       - Building: guides/building.md
       - Running: guides/running.md
       - Calibration: guides/calibration.md
