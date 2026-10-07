@@ -13,7 +13,13 @@ ekf_filter_node:
 
     # Wheel odometry: fuse x, yaw (pose) + vx, vyaw (velocity)
     odom0: /diff_drive_controller/odom
-    odom0_config: [true,  false, false,
+    # SAME FIX AS sim_ekf.yaml, which carries the full explanation: y was never
+    # fused, so it was dead-reckoned from vx*sin(yaw) with no correction and
+    # drifted without bound. In simulation that produced a 6 m jump in one
+    # sample and an aborted episode. On the real robot the same configuration
+    # would drift laterally too, with no ground truth to notice it - worth
+    # re-checking against a tape measure after a long straight run.
+    odom0_config: [true,  true,  false,
                    false, false, true,
                    true,  false, false,
                    false, false, true,

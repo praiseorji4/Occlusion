@@ -29,7 +29,8 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from cv_bridge import CvBridge
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import (HistoryPolicy, QoSProfile, ReliabilityPolicy,
+                       qos_profile_sensor_data)
 from sensor_msgs.msg import CameraInfo, Image, LaserScan
 from tf2_ros import Buffer, TransformListener
 
@@ -88,7 +89,28 @@ class DepthToScanNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.warned_tf = False
 
-        self.pub = self.create_publisher(LaserScan, '~/scan', qos_profile_sensor_data)
+        # RELIABLE, not sensor-data BEST_EFFORT.
+        #
+        # A BEST_EFFORT publisher is INCOMPATIBLE with a RELIABLE subscriber, and
+        # the failure is silent on the subscriber's side - it simply never
+        # receives anything. Only the publisher says so, once, as
+        #   New subscription discovered on topic '~/scan', requesting
+        #   incompatible QoS. No messages will be sent to it.
+        # This node was publishing real scans at ~3.5 Hz while ubot_eval's
+        # readiness check reported "0 scans with a finite range on /scan_mono"
+        # and nav2 logged "observation buffer has not been updated", because both
+        # subscribe RELIABLE. scan_watchdog uses sensor-data QoS, so IT received
+        # them - which is why the chain looked half-alive.
+        #
+        # A RELIABLE publisher satisfies both kinds of subscriber, and it matches
+        # the LiDAR arm, where ros_gz_bridge publishes /scan reliably. Keeping
+        # the two arms' QoS identical is also a parity matter: a difference here
+        # would change how nav2 sees each sensor for reasons that have nothing to
+        # do with the sensor. At ~3.5 Hz the delivery guarantee costs nothing.
+        self.pub = self.create_publisher(
+            LaserScan, '~/scan',
+            QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
+                       history=HistoryPolicy.KEEP_LAST, depth=5))
         self.create_subscription(CameraInfo, '~/depth/camera_info', self._on_info,
                                  qos_profile_sensor_data)
         self.create_subscription(Image, '~/depth', self._on_depth, qos_profile_sensor_data)

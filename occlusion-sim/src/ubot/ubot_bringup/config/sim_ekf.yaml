@@ -11,11 +11,31 @@ ekf_filter_node:
 
     publish_tf: true
 
-    # Wheel odometry: fuse x, y, yaw (pose) + vx, vy, vyaw (velocity)
+    # Wheel odometry: fuse x, y, yaw (pose) + vx, vyaw (velocity)
     odom0: /diff_drive_controller/odom
-    odom0_config: [true,  false, false,   # x only, not y
+    # FUSE X AND Y. The pose row used to read [true, false, false] with the
+    # comment "x only, not y", and that is the bug behind an intermittent
+    # navigation failure that took a long time to find.
+    #
+    # A differential-drive robot has no lateral VELOCITY - vy stays false below,
+    # and that part was right. But it certainly has lateral POSITION in the odom
+    # frame: that is what happens every time it turns. With y unfused, nothing
+    # ever measures it, so the state is dead-reckoned from vx*sin(yaw) and any
+    # yaw error integrates into unbounded drift.
+    #
+    # Measured on a failing episode: /diff_drive_controller/odom held (0.44,
+    # 0.00) and ground truth agreed, while /odometry/filtered went
+    #     t=2.77s  (0.434, -0.530)
+    #     t=2.82s  (0.429,  5.610)     <- 6.14 m in one sample
+    #     t=2.85s  (0.446,  7.338)
+    # The EKF also publishes odom->base_footprint, so the local costmap followed
+    # it ~11 m away, the global plan fell outside the 3x3 m window, every pose
+    # was pruned, and nav2 aborted with "Resulting plan has 0 poses in it".
+    # Even in runs that SUCCEEDED, y drifted 0.18 -> -0.21 while the wheels
+    # reported 0.00, so this was degrading every episode, not just the failures.
+    odom0_config: [true,  true,  false,   # x AND y: both are observable here
                   false, false, true,    # yaw only
-                  true,  false, false,   # vx only
+                  true,  false, false,   # vx only - no lateral velocity (correct)
                   false, false, true,    # vyaw only
                   false, false, false]
     odom0_differential: false

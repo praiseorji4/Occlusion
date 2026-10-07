@@ -19,9 +19,11 @@ entirely wrong.
 """
 from __future__ import annotations
 
+import time
+
 import numpy as np
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -73,9 +75,22 @@ class MonoDepthNode(Node):
         self.info = msg
 
     def _on_image(self, msg: Image) -> None:
-        # Rate-limit by wall clock: inference is slower than the camera, and a
-        # queue of stale frames is worse than a lower frame rate.
-        now = self.get_clock().now().nanoseconds * 1e-9
+        # RATE-LIMIT BY WALL CLOCK. This used to read self.get_clock(), which
+        # under use_sim_time is the SIMULATED clock - and that clock only
+        # advances when this node processes a /clock message, on the very
+        # executor that inference blocks. So the limiter compared a real
+        # inference cost against a clock that had stopped while the inference
+        # ran, decided not enough time had passed, and dropped the next frame.
+        #
+        # Measured consequence: the chain delivered 1.57 Hz out of a 30 Hz
+        # camera, while the work itself costs ~41 ms (33.6 ms model + 7.1 ms
+        # projection), i.e. ~24 Hz of capacity. The global sim clock was
+        # healthy throughout - /scan at exactly 10.00 Hz - because Gazebo
+        # publishes that; it was this NODE's view of the clock that stalled.
+        #
+        # time.monotonic() is what the limiter always meant: inference cost is
+        # real time, so the gate on it must be real time too.
+        now = time.monotonic()
         if now - self.last_stamp < self.min_period:
             return
         if self.info is None:
@@ -116,8 +131,16 @@ class MonoDepthNode(Node):
 def main() -> None:
     rclpy.init()
     node = MonoDepthNode()
+    # A MultiThreadedExecutor so /clock keeps being processed while inference
+    # runs. With the default single-threaded spin, a ~34 ms forward pass blocks
+    # every other callback on this node, including the /clock subscription that
+    # feeds get_clock(). Nothing here depends on the sim clock any more, but a
+    # node whose clock freezes for a third of every cycle reports misleading
+    # timestamps to anything that reads them.
+    executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         # Ctrl-C and `ros2 launch` shutdown are normal exits, not faults. Without
         # catching the second one, every stop dumps a traceback into the robot log.

@@ -13,7 +13,10 @@ setup(
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'config'),
+         # *.json too: depth_scale_sim.json is the depth calibration, and
+         # without it depth_to_scan emits a scan with no finite range at all.
+         glob('config/*.yaml') + glob('config/*.json')),
         (os.path.join('share', package_name, 'behavior_trees'), glob('behavior_trees/*.xml')),
     ],
     install_requires=['setuptools'],

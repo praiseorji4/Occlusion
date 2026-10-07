@@ -23,8 +23,9 @@ from launch.actions import (AppendEnvironmentVariable, DeclareLaunchArgument,
                             IncludeLaunchDescription, RegisterEventHandler)
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.conditions import IfCondition
 from launch.substitutions import (Command, LaunchConfiguration, PathJoinSubstitution,
-                                  TextSubstitution)
+                                  PythonExpression, TextSubstitution)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from nav2_common.launch import RewrittenYaml
@@ -69,7 +70,30 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             [os.path.join(get_package_share_directory('ros_gz_sim'), 'launch',
                           'gz_sim.launch.py')]),
-        launch_arguments={'gz_args': [TextSubstitution(text='-r -v 4 '), world_file]}.items())
+        launch_arguments={'gz_args': [
+            TextSubstitution(text='-r -v 4 '),
+            # Same two switches as ubot_bringup/launch/sim.launch.py, and for the
+            # same reason: a campaign runs this with no display.
+            #   headless           -> '-s', the server only, no GUI process.
+            #   headless_rendering -> ogre2 renders offscreen through EGL.
+            # Without the second, the server still tries to open a GLX display
+            # for the camera sensor, fails, and SEGFAULTS - the camera topics
+            # exist and never publish. Without either, a container gets a GUI
+            # Gazebo and an rviz that cannot start.
+            PythonExpression(["'-s ' if '", LaunchConfiguration('headless'),
+                              "'.lower() in ('true','1') else ''"]),
+            PythonExpression(["'--headless-rendering ' if '",
+                              LaunchConfiguration('headless_rendering'),
+                              "'.lower() in ('true','1') else ''"]),
+            world_file]}.items())
+
+    # The <world name> INSIDE the sdf, which is NOT always the file name:
+    # parking_garage_occlusion.sdf declares <world name='parking_garage'> and
+    # sonoma_occlusion.sdf declares 'sensors'. Both the spawner and every scoped
+    # gz topic address the world by this name, so passing the file name works
+    # only for apartment.sdf and fails silently elsewhere - the spawner waits for
+    # a world that does not exist. sim.launch.py already separates the two.
+    world_name = LaunchConfiguration('world_name')
 
     bridge = Node(
         package='ros_gz_bridge', executable='parameter_bridge',
@@ -83,19 +107,26 @@ def generate_launch_description():
             '/camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
             '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+
+            # GROUND-TRUTH POSE from the model's PosePublisher, not from
+            # SceneBroadcaster's dynamic_pose/info - that one converts to
+            # transforms with an empty child_frame_id. See the longer note in
+            # ubot_bringup/launch/sim.launch.py. Remapped to /gt/tf.
+            '/model/ubot/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
         ],
         remappings=[
             ('/camera/image', '/camera/rgb/image_raw'),
             ('/camera/depth_image', '/camera/depth/image_raw'),
             ('/camera/camera_info', '/camera/rgb/camera_info'),
             ('/imu', '/imu/data'),
+            ('/model/ubot/pose', '/gt/tf'),
         ],
         output='screen', parameters=[{'use_sim_time': True}])
 
     spawn_entity = Node(
         package='ros_gz_sim', executable='create', output='screen',
         arguments=['-topic', 'robot_description', '-name', 'ubot',
-                   '-world', world,
+                   '-world', world_name,
                    '-x', spawn_x, '-y', spawn_y, '-z', spawn_z, '-Y', spawn_yaw])
 
     load_joint_state_broadcaster = Node(
@@ -129,6 +160,7 @@ def generate_launch_description():
             'image_topic': '/camera/rgb/image_raw',
             'camera_info_topic': '/camera/rgb/camera_info',
             'compressed': 'false',
+            'depth_scale_json': LaunchConfiguration('depth_scale_json'),
         }.items())
 
     # Same params file as the real robot, with the sim's odometry topic swapped
@@ -142,6 +174,20 @@ def generate_launch_description():
     mono_params = RewrittenYaml(
         source_file=os.path.join(pkg_mono, 'config', 'nav2_params_mono.yaml'),
         param_rewrites={
+            # USE_SIM_TIME MUST BE REWRITTEN HERE. nav2_params_mono.yaml says
+            # False on every node, which is right for the REAL robot - this file
+            # serves both. In sim, leaving it False gives nav2 nodes a WALL
+            # clock while every sensor topic carries SIM stamps, and the
+            # collision monitor then computes the scan's age as the difference
+            # between the two epochs:
+            #   [mono_scan]: Latest source and current collision monitor node
+            #   timestamps differ on 1789585390.29 seconds. Ignoring the source.
+            #   Robot to stop due to invalid source.
+            # It stops the robot permanently - 102 s of silence on /cmd_vel and
+            # 2.7 cm of travel - while every other part of the stack looks
+            # healthy. The LiDAR arm never hit this because its params file is
+            # sim-only and already says True.
+            'use_sim_time': 'true',
             'odom_topic': '/odometry/filtered',
             'default_nav_to_pose_bt_xml':
                 os.path.join(bt_dir, 'navigate_to_pose_mono.xml'),
@@ -154,14 +200,48 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(nav2_launch_dir, 'navigation_launch.py')),
         launch_arguments={'use_sim_time': 'true', 'params_file': mono_params}.items())
 
+    # use_rviz:=false is REQUIRED for a campaign: rviz is a GUI for a human
+    # watching one run, it competes with Gazebo and nav2 for the same cores, and
+    # on a headless host it dies with SIGABRT partway through an episode. It was
+    # unconditional here while sim.launch.py already had the switch, so the
+    # camera arm could not be run headless at all.
     rviz_node = Node(
         package='rviz2', executable='rviz2', name='rviz2',
         arguments=['-d', LaunchConfiguration('rviz_config')],
-        parameters=[{'use_sim_time': True}])
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('use_rviz')))
 
     return LaunchDescription([
         DeclareLaunchArgument('world', default_value='apartment',
-                              description='world .sdf in ubot_bringup/worlds AND its <world name>'),
+                              description='world FILE in ubot_bringup/worlds, without .sdf'),
+        # Separate from the file name on purpose: the spawner and every scoped gz
+        # topic (ground truth, contacts) address the world by the <world name>
+        # INSIDE the sdf, and the two differ - parking_garage_occlusion.sdf
+        # declares 'parking_garage', sonoma_occlusion.sdf declares 'sensors'.
+        # Passing the file name spawns into a world that does not exist, and the
+        # failure is a silent wait. sim.launch.py makes the same distinction.
+        DeclareLaunchArgument('world_name', default_value='apartment',
+                              description="<world name> inside that sdf "
+                                          "(apartment, parking_garage, sensors)"),
+        # THE DEPTH CALIBRATION IS NOT OPTIONAL IN SIM.
+        # Uncalibrated, the model reads about a*z + b with a = 1.31 and
+        # b = +1.04 m, so a surface 1 m away is reported at 2.3 m. Every
+        # point depth_to_scan projects then lands at the wrong HEIGHT,
+        # falls outside its 0.05-0.60 m band, and /scan_mono comes out with
+        # no finite range at all - readiness refuses the episode with
+        # "0 scans with a finite range" while the chain runs and looks
+        # healthy. Regenerate with ubot_eval/scripts/calibrate_sim_depth.py
+        # (or docker/run.sh calibrate) if the camera pose or model changes.
+        DeclareLaunchArgument(
+            'depth_scale_json',
+            default_value=os.path.join(pkg_mono, 'config', 'depth_scale_sim.json'),
+            description='depth calibration; "" means uncalibrated, which cannot navigate'),
+        DeclareLaunchArgument('headless', default_value='false',
+                              description='server only, no Gazebo GUI window'),
+        DeclareLaunchArgument('headless_rendering', default_value='false',
+                              description='render via EGL; required where there is no display'),
+        DeclareLaunchArgument('use_rviz', default_value='true',
+                              description='false for campaigns and headless hosts'),
         DeclareLaunchArgument('spawn_x', default_value='5.0'),
         DeclareLaunchArgument('spawn_y', default_value='0.0'),
         DeclareLaunchArgument('spawn_z', default_value='0.1'),

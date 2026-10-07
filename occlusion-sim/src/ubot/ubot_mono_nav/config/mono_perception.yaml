@@ -52,7 +52,22 @@ depth_to_scan:
 scan_watchdog:
   ros__parameters:
     use_sim_time: False
-    stale_after: 0.5         # camera depth arrives at ~5 Hz; 0.5 s = 2-3 missed
+    # MEASURED, not assumed. The old 0.5 s was derived from an ASSUMED 5 Hz
+    # camera stream ("0.5 s = 2-3 missed frames"). The stream does not run at
+    # 5 Hz. From ubot_eval/bag_timing.py over a real sim episode's bag:
+    #
+    #     /scan_mono   2.0-2.6 Hz   median gap 0.265 s   p95 0.725 s   max 0.93 s
+    #
+    # So p95 already EXCEEDED the old threshold: the watchdog judged the scan
+    # stale and zeroed the command routinely, not occasionally, and the robot
+    # travelled 2.5 cm before nav2 gave up. That was read as a 12 s perception
+    # stall; the bag showed no such stall.
+    #
+    # 2.0 s is ~4-5 missed frames at the measured rate: comfortably clear of
+    # p95 and of the worst observed gap, while still stopping the robot well
+    # inside the 3 m course if the camera genuinely dies. Re-derive this with
+    # bag_timing.py if the camera rate changes - do not guess it again.
+    stale_after: 2.0
     publish_rate: 20.0
 
 oak_rgb_node:

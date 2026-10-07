@@ -57,6 +57,17 @@ def generate_launch_description():
                               description="<world name> inside that sdf (spawner addresses it by name)"),
         # Default spawn: on the Sonoma pit lane beside the occlusion scene (cars/pedestrians
         # sit around x 245..275, y -132..-115, ground z ~3.3).
+        #
+        # THE SPAWN POSE BELONGS TO THE WORLD. Overriding `world` WITHOUT also
+        # overriding these four puts the robot at Sonoma's coordinates inside
+        # whatever world you asked for. In `apartment` that is ~300 m outside
+        # the building, in empty space, where the LiDAR honestly returns .inf
+        # for every beam and the camera sees nothing. There is no error: the
+        # robot spawns, falls 3.4 m to the floor and sits there, and the only
+        # symptom is that readiness refuses on the scan check. Cost a long
+        # debugging session once already. For the apartment use:
+        #   spawn_x:=5.0 spawn_y:=0.0 spawn_z:=0.1 spawn_yaw:=1.5708
+        # ubot_eval passes these per course; see ubot_eval/config/courses.yaml.
         DeclareLaunchArgument('spawn_x', default_value='272.0'),
         DeclareLaunchArgument('spawn_y', default_value='-136.0'),
         DeclareLaunchArgument('spawn_z', default_value='3.45'),
@@ -65,11 +76,21 @@ def generate_launch_description():
         # which is usually what you want for occlusion capture, and makes startup reliable:
         #   ros2 launch ubot_bringup sim.launch.py use_slam:=false use_nav2:=false use_rviz:=false
         DeclareLaunchArgument('use_slam', default_value='true'),
+        # Empty means "pick from use_slam" (see the note by nav2_params_path).
+        # Set it only to override both, e.g. for a tuning sweep.
+        DeclareLaunchArgument('params_file', default_value='',
+                              description='nav2 params override; empty = choose by use_slam'),
         DeclareLaunchArgument('use_nav2', default_value='true'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
         # headless:=true runs the Gazebo server only (no GUI window). Sensors still work.
         # Much lighter, and the only way to run on a machine without a display.
         DeclareLaunchArgument('headless', default_value='false'),
+        # Separate from `headless` on purpose: headless means "no GUI window",
+        # this means "render offscreen through EGL". A machine with a display
+        # (WSLg, a desktop) wants headless:=true on its own; a container with no
+        # display needs BOTH, or Gazebo segfaults when it tries to open one.
+        DeclareLaunchArgument('headless_rendering', default_value='false',
+                              description='render via EGL; required where there is no display at all'),
         # start_gazebo:=false attaches to a Gazebo that is ALREADY running, e.g. one you
         # started by hand with:  gz sim -r sonoma_occlusion.sdf
         # Leaving this true while a server is already up starts a SECOND server: both
@@ -105,6 +126,17 @@ def generate_launch_description():
         launch_arguments={'gz_args': [
             TextSubstitution(text='-r -v 4 '),
             PythonExpression(["'-s ' if '", LaunchConfiguration('headless'), "'.lower() in ('true','1') else ''"]),
+            # --headless-rendering makes ogre2 render offscreen through EGL
+            # instead of opening a GLX display. `-s` alone only means "no GUI
+            # process": the SERVER still renders the camera and LiDAR, and on a
+            # machine with no display at all it logs
+            #   Unable to open display / unable to find OpenGL 3+ Rendering
+            #   Subsystem
+            # and then SEGFAULTS (exit 139), taking the sensors with it. WSL has
+            # a display via WSLg so it never needed this; a container does.
+            PythonExpression(["'--headless-rendering ' if '",
+                              LaunchConfiguration('headless_rendering'),
+                              "'.lower() in ('true','1') else ''"]),
             world_file]}.items(),
         condition=IfCondition(LaunchConfiguration('start_gazebo'))
     )
@@ -145,6 +177,21 @@ def generate_launch_description():
                          'base_contact_sensor/contact'
                          '@ros_gz_interfaces/msg/Contacts[gz.msgs.Contacts'),
             ]),
+
+            # GROUND-TRUTH POSE - the reference every path metric is measured
+            # against, and the only thing that can catch odometry lying. With no
+            # SLAM, nav2 believes odom, so when odom drifts nav2 reports
+            # SUCCEEDED from the wrong place (`false_success` in
+            # ubot_eval/schema.py).
+            #
+            # This is the PosePublisher on the model (see ubot_gazebo.urdf.xacro),
+            # NOT SceneBroadcaster's /world/<w>/dynamic_pose/info. That free
+            # stream carries entity names but no per-pose header data, and the
+            # bridge reads frame ids from the header data - so it converts to
+            # transforms with an EMPTY child_frame_id, which cannot be told apart
+            # from a moving pedestrian's. The model topic needs no world-name
+            # substitution either, since it is scoped by model, not by world.
+            '/model/ubot/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
         ],
         remappings=[
             (PathJoinSubstitution([
@@ -152,6 +199,7 @@ def generate_launch_description():
                 TextSubstitution(text='model/ubot/link/base_footprint/sensor/'
                                       'base_contact_sensor/contact')]),
              '/bumper/contacts'),
+            ('/model/ubot/pose', '/gt/tf'),
             ('/camera/image', '/camera/rgb/image_raw'),
             ('/camera/depth_image', '/camera/depth/image_raw'),
             ('/camera/camera_info', '/camera/rgb/camera_info'),
@@ -253,6 +301,24 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_slam'))
     )
 
+    # REMOVED: a static identity map->odom published when use_slam:=false.
+    #
+    # It was added because nav2's docking_server failed its CONFIGURE transition
+    # with SLAM off, and lifecycle_manager aborts the whole bringup when any one
+    # node fails. The supporting experiment - the same params file with
+    # use_slam:=true, where bringup succeeded - was CONFOUNDED: that run also
+    # killed a leftover opennav_docking from a previous stack, and the real
+    # message was
+    #   Unable to start transition 1 from current state active
+    # i.e. the docking server was a zombie that was ALREADY active, not a node
+    # missing a frame. campaign.py::kill_survivors now removes those between
+    # episodes, and bringup succeeds with no map frame at all.
+    #
+    # Nothing here plans in `map`: nav2_params_lidar_odom.yaml sets global_frame
+    # to odom, and position truth comes from Gazebo via /gt/tf. A transform that
+    # asserts map == odom while claiming to be scaffolding is a localisation
+    # claim nobody measured, so it does not stay for comfort.
+
     # 8. RViz2 Node
     rviz_node = Node(
         package='rviz2',
@@ -263,11 +329,25 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_rviz'))
     )
 
-    nav2_params_path = os.path.join(
-            get_package_share_directory('ubot_bringup'),
-            'config',
-            'sim_nav2_params.yaml'
-        )
+    # WHICH nav2 PARAMS: the frame has to follow use_slam, because only SLAM
+    # publishes map->odom.
+    #
+    #   use_slam:=true   -> sim_nav2_params.yaml       (map-framed, static_layer)
+    #   use_slam:=false  -> nav2_params_lidar_odom.yaml (odom-framed, rolling)
+    #
+    # Getting this wrong is SILENT: with use_slam:=false and the map-framed file,
+    # nothing publishes map->odom, the global costmap falls back to a default
+    # 5x5 m grid at the origin, the robot is logged "out of bounds of the
+    # costmap", and nav2 aborts after ~15 recoveries with plenty of clearance.
+    # That was an actual run, not a guess, so the choice is made here rather
+    # than left to whoever writes the command line.
+    _cfg_dir = os.path.join(get_package_share_directory('ubot_bringup'), 'config')
+    nav2_params_path = PythonExpression([
+        "'", LaunchConfiguration('params_file'), "' or ("
+        "'", os.path.join(_cfg_dir, 'sim_nav2_params.yaml'), "' "
+        "if '", LaunchConfiguration('use_slam'), "'.lower() in ('true', '1') "
+        "else '", os.path.join(_cfg_dir, 'nav2_params_lidar_odom.yaml'), "')"
+    ])
 
     ekf_config_path = os.path.join(
         get_package_share_directory('ubot_bringup'),
