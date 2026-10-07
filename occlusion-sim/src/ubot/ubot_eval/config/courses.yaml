@@ -1,0 +1,90 @@
+# Worlds, spawn poses and goals.
+#
+# A course is a (spawn, goal) pair in a world. `pair_key` is world/course/trial,
+# so these names end up in every summary and in the bootstrap - keep them stable.
+#
+# TWO NAMES PER WORLD, AND THEY DIFFER. `world` is the .sdf FILE in
+# ubot_bringup/worlds; `world_name` is the <world name> INSIDE it, which is what
+# the spawner and every scoped gz topic (ground truth, contacts) address. Passing
+# the file name where the world name belongs fails silently - the spawner waits
+# for a world that does not exist.
+#
+# `shortest_path_m` is null until measured. It is NOT the straight-line distance:
+# it comes from A* on an occupancy grid built by a manual slam_toolbox mapping
+# pass, inflated by the 0.219 m footprint half-diagonal and string-pulled (plain
+# 8-connected A* overestimates diagonals by ~8%, which would inflate every SPL).
+# Leaving it null is safe: schema.validate refuses to score a success without it
+# rather than silently recording an SPL of zero.
+
+schema_version: 1
+
+worlds:
+
+  apartment:
+    world: apartment
+    world_name: apartment
+    description: Indoor corridor and rooms, two halls ~7 x 20 m. Walls slice cleanly at z=0.3.
+    courses:
+      hall_3m:
+        description: The smoke test. A clear 3 m hop down the right-hand hall.
+        spawn: {x: 5.0, y: 0.0, z: 0.1, yaw: 1.5708}
+        goal: {x: 5.0, y: 3.0, yaw: 1.5708}
+        # MEASURED 2026-09-16 from maps/apartment.yaml (slam_toolbox pass,
+        # 497x379 @ 0.05 m/pix) by scripts/measure_courses.sh: A* inflated by
+        # the 0.219 m footprint half-diagonal and string-pulled.
+        # 1.001x the straight line, as expected for a clear corridor.
+        shortest_path_m: 3.0017
+        timeout_s: 90
+      hall_10m:
+        description: Down the hall, past the doorway pinch point.
+        spawn: {x: 5.0, y: 0.0, z: 0.1, yaw: 1.5708}
+        goal: {x: 5.0, y: 10.0, yaw: 1.5708}
+        # MEASURED 2026-09-16, same pass and method as hall_3m. 1.319x the
+        # straight line: the route has to go round the doorway pinch, which is
+        # the whole point of this course and is exactly why a straight-line
+        # denominator would have been wrong here by 32%.
+        shortest_path_m: 13.1899
+        timeout_s: 180
+      corner_turn:
+        description: Requires a turn, so the 65 deg blind spot matters - improvement A's case.
+        spawn: {x: 5.0, y: 0.0, z: 0.1, yaw: 1.5708}
+        goal: {x: 1.5, y: 8.0, yaw: 3.1416}
+        # MEASURED 2026-09-16, same pass and method. 1.016x the straight line.
+        shortest_path_m: 8.8718
+        timeout_s: 180
+
+  parking_garage:
+    world: parking_garage_occlusion
+    world_name: parking_garage          # NOT the file name
+    description: >
+      Pillars, parked vehicles and a pedestrian crossing at x = -11.0. Built for
+      this: occlusion-rich, which is where the camera arm is expected to struggle
+      and where improvement A should pay.
+    courses:
+      aisle_8m:
+        description: Straight down the aisle between parked vehicles.
+        spawn: {x: 0.0, y: 0.0, z: 0.1, yaw: 0.0}
+        goal: {x: 8.0, y: 0.0, yaw: 0.0}
+        shortest_path_m: null
+        timeout_s: 180
+      past_pillar:
+        description: The pillar hides the far side until the robot commits to the gap.
+        spawn: {x: 0.0, y: 0.0, z: 0.1, yaw: 0.0}
+        goal: {x: 6.0, y: -4.0, yaw: -1.5708}
+        shortest_path_m: null
+        timeout_s: 180
+      crossing:
+        description: Approaches the pedestrian crossing at x = -11.0 from the open side.
+        spawn: {x: -4.0, y: 0.0, z: 0.1, yaw: 3.1416}
+        goal: {x: -11.0, y: 0.0, yaw: 3.1416}
+        shortest_path_m: null
+        timeout_s: 180
+
+# The smoke test run before any campaign: if lidar_ref fails a 3 m clear hop, the
+# COURSE is broken, not the camera. Stop the line rather than collecting 19 hours
+# of data against a broken fixture.
+smoke:
+  world: apartment
+  course: hall_3m
+  arms: [lidar_ref, mono_baseline]
+  trials: 2

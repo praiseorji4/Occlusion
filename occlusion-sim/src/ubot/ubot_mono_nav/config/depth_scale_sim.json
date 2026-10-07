@@ -1,0 +1,16 @@
+{
+  "created": "2026-09-16T18:10:22",
+  "source": "gazebo_depth_truth",
+  "provenance": "gazebo depth truth, 21020 points over 5.78 m",
+  "fit": {
+    "a": 1.305519,
+    "b": 1.03973,
+    "n": 21020,
+    "n_inliers": 6321,
+    "span_m": 5.779,
+    "median_abs_resid_m": 0.2554
+  },
+  "frames": 80,
+  "model_topic": "/mono/depth",
+  "truth_topic": "/camera/depth/image_raw"
+}

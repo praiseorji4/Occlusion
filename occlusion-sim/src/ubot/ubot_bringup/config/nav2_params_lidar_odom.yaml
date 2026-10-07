@@ -1,0 +1,480 @@
+# nav2 parameters for the LiDAR control arm (`lidar_ref`), planning in ODOM.
+#
+# Copied from sim_nav2_params.yaml, which is NOT edited so the mapped LiDAR
+# stack stays runnable. The ONLY changes are the ones that remove the map:
+#
+#   1. global_frame map -> odom in bt_navigator, global_costmap and
+#      behavior_server.
+#   2. static_layer dropped from the global costmap (there is no map to load).
+#   3. The global costmap becomes a 10x10 m rolling window, matching
+#      nav2_params_mono.yaml exactly.
+#
+# WHY THIS FILE EXISTS. The camera arm cannot use a map - nothing publishes
+# map->odom without SLAM - so a map-framed LiDAR arm would differ from it in
+# two ways at once (sensor AND frame), and no result could be attributed to the
+# sensor. This file makes the frame identical so the sensor is the only
+# difference. Running `use_slam:=false` against the map-framed
+# sim_nav2_params.yaml instead leaves NOTHING publishing map->odom: the global
+# costmap silently falls back to a default 5x5 m grid at the origin, the robot
+# is reported "out of bounds of the costmap", and nav2 aborts after ~15
+# recoveries. That is an observed failure, not a hypothetical one.
+#
+# WHAT IS DELIBERATELY *NOT* MATCHED TO THE CAMERA. The LiDAR keeps its native
+# ranges (obstacle 2.5 m, raytrace 3.0 m) and its full behaviour set, including
+# spin and backup, which nav2_params_mono.yaml removes because a 65-degree
+# camera is blind to the sides. `lidar_ref` is meant to be the baseline you
+# would actually ship, so handicapping it to the camera's limits would flatter
+# the camera arm. The comparison is "what does dropping the LiDAR cost you",
+# not "what do these two sensors do under the camera's constraints".
+bt_navigator:
+  ros__parameters:
+    use_sim_time: True
+    global_frame: odom                    # was: map - no SLAM in this arm
+    robot_base_frame: base_footprint
+    odom_topic: /odometry/filtered
+    bt_loop_duration: 10
+    filter_duration: 0.3
+    # BT ACTION TIMEOUTS, RAISED FOR A CPU-STARVED SIM. At the default 20 ms,
+    # bt_navigator accepted the goal and then aborted with
+    #   Timed out while waiting for action server to acknowledge goal request
+    #   for compute_path_to_pose
+    # 4.32 s of wall time later - about 1 s of sim time at this real-time
+    # factor - while planner_server was active and bonded. Nothing was wrong
+    # with the planner; the acknowledgement simply did not get scheduled in
+    # time on a machine running Gazebo, nav2 and a physics step on the same
+    # cores. The episode recorded `aborted` with a 0.08 m path, which is a
+    # measurement of the host, not of navigation.
+    #
+    # KEEP THIS IDENTICAL TO nav2_params_mono.yaml. A longer fuse is a real
+    # advantage - it buys retries the other arm would not get - so the two arms
+    # must carry the same value or the comparison is rigged.
+    default_server_timeout: 200
+    wait_for_service_timeout: 5000
+    introspection_mode: "disabled"
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+      enable_groot_monitoring: false
+      groot_server_port: 1667
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+      enable_groot_monitoring: false
+      groot_server_port: 1669
+    error_code_name_prefixes:
+      - assisted_teleop
+      - backup
+      - compute_path
+      - drive_on_heading
+      - follow_path
+      - nav_thru_poses
+      - nav_to_pose
+      - spin
+      - smoother
+      - wait
+
+bt_navigator_navigate_through_poses_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+bt_navigator_navigate_to_pose_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+controller_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 20.0
+    # MEASURED, and the reason the camera arm aborted after 1.03 m.
+    # The controller waits this long for a costmap update before giving up with
+    #   ERROR: Costmap timed out waiting for update
+    #   [follow_path] Aborting handle.
+    # The local costmap refreshes when a scan arrives. /scan_mono arrives at
+    # ~1.3-2.1 Hz - a 0.5-0.8 s period - so at 0.30 s the controller timed out
+    # on essentially every cycle. The LiDAR at 10 Hz never gets close, which is
+    # why only the camera arm hit it.
+    #
+    # 1.5 s covers the measured period plus the pipeline latency that rides on
+    # top (the scan carries the RGB CAPTURE stamp, so consumers see it aged by
+    # the whole depth chain - observed growing to 2.4 s).
+    # KEEP IDENTICAL IN BOTH ARMS: a longer patience is an advantage, and at
+    # 10 Hz it changes nothing for the LiDAR, so matching it costs the control
+    # group nothing and keeps the comparison about the sensor.
+    costmap_update_timeout: 1.5
+    min_x_velocity_threshold: 0.001
+    odom_topic: /odometry/filtered
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+    path_handler_plugins: ["PathHandler"]
+    use_realtime_priority: false
+    speed_limit_topic: "speed_limit"
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+    
+    general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      # AIM TIGHTER THAN THE GRADER. ubot_eval scores arrival on GROUND TRUTH
+      # against schema.GOAL_TOLERANCE_M (0.15 m). nav2 stops as soon as its own
+      # ODOMETRY estimate is inside this tolerance, so if the two numbers are
+      # equal, "success" requires odometry to be perfect: an observed run
+      # finished 0.152 m from the goal by ground truth - 2 mm over - and was
+      # recorded as `false_success` despite navigating the course cleanly with
+      # no recoveries. 0.10 here leaves a 0.05 m budget for drift, while drift
+      # larger than that still fails, which is the behaviour that was wanted.
+      # KEEP IDENTICAL TO nav2_params_mono.yaml.
+      xy_goal_tolerance: 0.10
+      yaw_goal_tolerance: 0.15
+      path_length_tolerance: 1.0
+    
+    PathHandler:
+      plugin: "nav2_controller::FeasiblePathHandler"
+      prune_distance: 2.0
+      enforce_path_inversion: False
+      enforce_path_rotation: False
+      inversion_xy_tolerance: 0.2
+      inversion_yaw_tolerance: 0.4
+      minimum_rotation_angle: 0.785
+      reject_unit_path: False
+    
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: True
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      max_vel_x: 0.15
+      max_vel_y: 0.0
+      max_vel_theta: 0.6
+      min_speed_xy: 0.0
+      max_speed_xy: 0.15
+      min_speed_theta: 0.0
+      acc_lim_x: 2.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 3.2
+      decel_lim_x: -2.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -3.2
+      vx_samples: 20
+      vy_samples: 5
+      vtheta_samples: 20
+      sim_time: 1.7
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      # BACK TO 0.2 after a wrong turn worth recording. This was raised to 1.0 s
+      # to stop "Resulting plan has 0 poses in it", on the theory that the plan
+      # was aging past the transform window. The REAL cause was the EKF fusing
+      # x but not y: /odometry/filtered jumped 6.14 m in one sample, the local
+      # costmap followed it ~11 m away, and the plan fell outside it. That is
+      # fixed in sim_ekf.yaml, so the tolerance no longer has a job to do.
+      #
+      # And a large tolerance is not free: at 0.15 m/s, 1.0 s of slack is ~0.15 m
+      # of positional uncertainty, which is the same size as the 0.10 m goal
+      # tolerance the robot has to settle inside. With it raised, BOTH arms
+      # drove the full course (3.2 m of a 3.0 m route) and then timed out
+      # without ever converging - 0/3 where they had been 2/3 and 1/3.
+      # KEEP IDENTICAL IN BOTH ARMS.
+      transform_tolerance: 0.2
+      # MUST BE TIGHTER THAN general_goal_checker's xy_goal_tolerance (0.10).
+      # This is DWB's OWN arrival tolerance: inside it, DWB stops translating
+      # and only rotates to the goal heading. At 0.15 against a checker that
+      # wants 0.10, the robot parks in the gap between the two and neither
+      # condition is ever satisfied - observed as six consecutive episodes
+      # stalling at 0.146-0.158 m with 7-8 recoveries and a 90 s timeout, on
+      # BOTH arms.
+      #
+      # It was latent until the EKF was fixed: while odometry drifted, the
+      # robot's BELIEVED pose could satisfy the checker from somewhere else
+      # entirely, so the contradiction stayed hidden. Accurate odometry made the
+      # geometry honest and the deadlock immediate.
+      # KEEP IDENTICAL IN BOTH ARMS.
+      xy_goal_tolerance: 0.08
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: True
+      stateful: True
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      PathAlign.forward_point_distance: 0.1
+      GoalAlign.scale: 24.0
+      GoalAlign.forward_point_distance: 0.1
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: True
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_footprint
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      # Inspection Robot 01 body: 357 x 252 mm (incl. wheels), origin centred between the
+      # axles. Rectangular footprint + 15 mm padding; a circle (r 0.219) would refuse
+      # gaps the robot actually fits through.
+      footprint: "[[0.185, 0.131], [0.185, -0.131], [-0.185, -0.131], [-0.185, 0.131]]"
+      footprint_padding: 0.015
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          # inf_is_valid: kept IDENTICAL to nav2_params_mono.yaml, which carries
+          # the full explanation. It matters enormously there (an all-inf camera
+          # scan would otherwise clear nothing and leave the costmap unknown) and
+          # little here, because a 360-degree LiDAR indoors almost always hits
+          # something. Same setting in both arms so the comparison measures the
+          # sensor rather than the configuration.
+          inf_is_valid: true
+          obstacle_min_range: 0.0
+      always_send_full_costmap: True
+      introspection_mode: "disabled"
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: True
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: odom                  # was: map
+      robot_base_frame: base_footprint
+      # No map means no fixed extent, so the global costmap follows the robot.
+      # 10x10 m is the same window nav2_params_mono.yaml uses, so neither arm
+      # gets more planning horizon than the other.
+      rolling_window: true
+      # 30 x 30 m, NOT 10 x 10. The rolling window is centred on the robot, so
+      # 10 m reaches only 5 m out, and a goal beyond that is refused outright:
+      #   GridBased plugin failed to plan ... "Goal Coordinates of (10.0, 0.0)
+      #   was outside bounds"
+      # hall_10m (goal 10 m away) aborted in 0.5 s on every arm, and corner_turn
+      # (~8.7 m) is in the same position. 30 m covers every course with margin.
+      # KEEP IDENTICAL IN BOTH ARMS - it is in campaign.PARITY_KEYS.
+      width: 30
+      height: 30
+      # Inspection Robot 01 body: 357 x 252 mm (incl. wheels), origin centred between the
+      # axles. Rectangular footprint + 15 mm padding; a circle (r 0.219) would refuse
+      # gaps the robot actually fits through.
+      footprint: "[[0.185, 0.131], [0.185, -0.131], [-0.185, -0.131], [-0.185, 0.131]]"
+      footprint_padding: 0.015
+      resolution: 0.05
+      track_unknown_space: true
+      # static_layer dropped: it would wait forever for a map that no node
+      # publishes, and log "Can't update static costmap layer, no map received".
+      plugins: ["obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          # inf_is_valid: kept IDENTICAL to nav2_params_mono.yaml, which carries
+          # the full explanation. It matters enormously there (an all-inf camera
+          # scan would otherwise clear nothing and leave the costmap unknown) and
+          # little here, because a 360-degree LiDAR indoors almost always hits
+          # something. Same setting in both arms so the comparison measures the
+          # sensor rather than the configuration.
+          inf_is_valid: true
+          obstacle_min_range: 0.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.2
+      always_send_full_costmap: True
+      introspection_mode: "disabled"
+
+planner_server:
+  ros__parameters:
+    use_sim_time: True
+    allow_partial_planning: false
+    expected_planner_frequency: 20.0
+    planner_plugins: ["GridBased"]
+    costmap_update_timeout: 1.0
+    introspection_mode: "disabled"
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: True
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      refinement_num: 2
+      do_refinement: True
+      enforce_path_inversion: True
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: True
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+      acceleration_limit: 2.5
+      deceleration_limit: -2.5
+      minimum_speed: 0.10
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+      acceleration_limit: 2.5
+      deceleration_limit: -2.5
+      minimum_speed: 0.10
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors::AssistedTeleop"
+    local_frame: odom
+    global_frame: odom                    # was: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
+    rotational_acc_lim: 3.2
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: True
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: True
+    loop_rate: 20
+    stop_on_failure: false
+    introspection_mode: "disabled"
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: True
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.15, 0.0, 0.6]
+    min_velocity: [-0.5, 0.0, -1.0]
+    max_accel: [2.5, 0.0, 3.2]
+    max_decel: [-2.5, 0.0, -3.2]
+    odom_topic: "/odometry/filtered"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: True
+    enabled: True
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2   # see the note by the DWB one
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "local_costmap/published_footprint"
+      time_before_collision: 1.2
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: False
+      enabled: True
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/scan"
+      min_height: 0.15
+      max_height: 2.0
+      enabled: True
+
+map_saver:
+  ros__parameters:
+    use_sim_time: True
+    save_map_timeout: 5.0
+    free_thresh_default: 0.25
+    occupied_thresh_default: 0.65
+    map_subscribe_transient_local: True
+    introspection_mode: "disabled"
+
+docking_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 50.0
+    initial_perception_timeout: 5.0
+    wait_charge_timeout: 5.0
+    dock_approach_timeout: 30.0
+    undock_linear_tolerance: 0.05
+    undock_angular_tolerance: 0.1
+    max_retries: 3
+    base_frame: "base_footprint"
+    fixed_frame: "odom"
+    dock_prestaging_tolerance: 0.5
+    introspection_mode: "disabled"
+    dock_plugins: ["simple_charging_dock"]
+    simple_charging_dock:
+      plugin: "opennav_docking::SimpleChargingDock"
+      docking_threshold: 0.05
+      staging_x_offset: -0.7
+      use_external_detection_pose: false
+      use_battery_status: false
+      use_stall_detection: false
+    controller:
+      k_phi: 3.0
+      k_delta: 2.0
+      v_linear_min: 0.15
+      v_linear_max: 0.15
